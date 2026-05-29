@@ -8,8 +8,9 @@
  *   RENTALY_API_KEY=pk_live_… \
  *   npm run smoke
  *
- * Reads only by default. To exercise the two write paths (create work order +
- * resident message) add SMOKE_WRITES=1 — only run that against a sandbox org.
+ * Reads only by default. SMOKE_WRITES=1 exercises create work order. The
+ * resident message path is gated separately behind SMOKE_MESSAGE=1 because it
+ * sends a real message to a real resident — only enable it deliberately.
  */
 import { rentaly } from "../src/api/rentaly-client.js";
 
@@ -87,10 +88,20 @@ async function main() {
         description: "[smoke test] Please ignore — automated live smoke test.",
       });
       show("created work order", created);
+
+      // Close it IMMEDIATELY so no zombie WO sits open in a real client's
+      // queue. The resolution note is the searchable tag for the cutover.
+      const closed = await rentaly.closeWorkOrder({
+        work_order_id: created.work_order_id,
+        resolution_notes: "smoke test for Phase 2 cutover, please ignore",
+      });
+      show("closed work order", closed);
     }
 
     divider("9. Send resident message (WRITE)");
-    if (!firstResident) {
+    if (process.env.SMOKE_MESSAGE !== "1") {
+      console.log("Skipped — set SMOKE_MESSAGE=1 to send a real message to a real resident.");
+    } else if (!firstResident) {
       console.log("No resident available — skipping message.");
     } else {
       const sent = await rentaly.sendMessage({
