@@ -1,0 +1,59 @@
+# Post-deploy live smoke test.
+#
+# Why this exists
+# ───────────────
+# Unit tests in the rentaly backend mock Prisma and mount only the router,
+# so a `select` on a non-existent column or a missing global middleware
+# (e.g. the CSRF X-Api-Key bypass) passes green and still crashes real
+# Claude traffic. The live smoke is the only thing that exercises the real
+# /api/v1/* surface end-to-end through the rentaly-client conversion layer.
+#
+# This runs it automatically so prod breakage pages US, not a client:
+#   - push to main      → a change to the MCP server itself is verified.
+#   - daily schedule    → catches rentaly BACKEND drift (their deploys don't
+#                         touch this repo, so push alone would miss it).
+#   - manual dispatch    → on-demand check from the Actions tab.
+#
+# READS ONLY. We never set SMOKE_WRITES / SMOKE_MESSAGE here, so the job
+# never creates a work order or messages a real resident in prod.
+#
+# On failure the job exits non-zero (smoke-live.ts main().catch → exit 1)
+# and GitHub emails the repo owner.
+#
+# Setup (one-time): add the API key as a repo secret named RENTALY_API_KEY
+#   GitHub repo → Settings → Secrets and variables → Actions → New secret.
+# The base URL is non-secret and lives inline below.
+name: smoke-live
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 13 * * *" # 13:17 UTC daily — off the top of the hour to dodge cron congestion
+  workflow_dispatch: {}
+
+# Never run two smokes at once (a push + the cron firing together would
+# double-hit prod for no benefit).
+concurrency:
+  group: smoke-live
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run live smoke (reads only)
+        env:
+          RENTALY_API_BASE_URL: https://api.proprietio.com/api
+          RENTALY_API_KEY: ${{ secrets.RENTALY_API_KEY }}
+        run: npm run smoke
