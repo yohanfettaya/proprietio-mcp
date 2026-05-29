@@ -12,6 +12,7 @@
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "demo": "tsx scripts/demo.ts",
+    "smoke": "tsx scripts/smoke-live.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
