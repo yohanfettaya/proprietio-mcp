@@ -39,6 +39,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Cheap uptime check of the DEPLOYED HTTP server. The smoke job below
+  # bypasses the MCP HTTP layer (it calls the rentaly-client directly), so it
+  # would stay green even if the server itself were down or a deploy broke
+  # routing. This job catches that: it hits the public endpoints over the wire.
+  healthz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: GET /healthz
+        run: |
+          status=$(curl -fsS --max-time 30 https://mcp.proprietio.com/healthz | jq -r '.status')
+          echo "healthz status=$status"
+          test "$status" = "ok"
+      - name: GET / (tool count >= 18, the frozen MCP contract)
+        run: |
+          tools=$(curl -fsS --max-time 30 https://mcp.proprietio.com/ | jq -r '.tools')
+          echo "tools registered=$tools"
+          test "$tools" -ge 18
+
   smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
