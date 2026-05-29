@@ -52,13 +52,15 @@ async function startHttp() {
 
   app.get("/healthz", (_req, res) => res.json({ status: "ok" }));
 
-  // --- OAuth 2.0 discovery ---
-  app.get("/.well-known/oauth-authorization-server", (_req, res) => {
-    res.json(authorizationServerMetadata(cfg));
-  });
-  app.get("/.well-known/oauth-protected-resource", (_req, res) => {
-    res.json(protectedResourceMetadata(cfg));
-  });
+  // --- OAuth 2.0 discovery (only when a real OAuth server is configured) ---
+  if (process.env.MCP_OAUTH_ENABLED === "true") {
+    app.get("/.well-known/oauth-authorization-server", (_req, res) => {
+      res.json(authorizationServerMetadata(cfg));
+    });
+    app.get("/.well-known/oauth-protected-resource", (_req, res) => {
+      res.json(protectedResourceMetadata(cfg));
+    });
+  }
 
   // --- MCP endpoint (Streamable HTTP) ---
   // Stateless mode — one Server per request. Fine for our tools (no in-mem session).
