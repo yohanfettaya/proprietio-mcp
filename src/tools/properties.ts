@@ -6,6 +6,7 @@ import {
   GetLeaseInput, ListResidentsInput,
 } from "../types.js";
 import { properties, units, leases, residents } from "../data/mock.js";
+import { rentaly, isLiveBackend } from "../api/rentaly-client.js";
 import type { ToolDefinition } from "./index.js";
 
 export const propertyTools: ToolDefinition[] = [
@@ -15,6 +16,7 @@ export const propertyTools: ToolDefinition[] = [
       "Search the Proprietio portfolio by city, state, owner, or unit count. Returns a list of matching properties with summary details.",
     inputSchema: SearchPropertiesInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.searchProperties(args);
       let out = [...properties];
       if (args.city) out = out.filter(p => p.city.toLowerCase().includes(args.city!.toLowerCase()));
       if (args.state) out = out.filter(p => p.state === args.state);
@@ -30,6 +32,7 @@ export const propertyTools: ToolDefinition[] = [
       "Get the full record for a single property, including its units and active leases.",
     inputSchema: GetPropertyInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.getProperty(args);
       const property = properties.find(p => p.property_id === args.property_id);
       if (!property) throw new Error(`Property not found: ${args.property_id}`);
       const propertyUnits = units.filter(u => u.property_id === args.property_id);
@@ -43,6 +46,7 @@ export const propertyTools: ToolDefinition[] = [
       "List all units in a property, with occupancy and current rent. Optionally filter to occupied units only.",
     inputSchema: ListUnitsInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.listUnits(args);
       let out = units.filter(u => u.property_id === args.property_id);
       if (args.occupied_only) out = out.filter(u => u.occupied);
       const occupancyRate = out.length === 0 ? 0 :
@@ -61,6 +65,7 @@ export const propertyTools: ToolDefinition[] = [
       "Get full lease details: tenant, term, rent, deposit, and status.",
     inputSchema: GetLeaseInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.getLease(args);
       const lease = leases.find(l => l.lease_id === args.lease_id);
       if (!lease) throw new Error(`Lease not found: ${args.lease_id}`);
       const leaseResidents = residents.filter(r => lease.resident_ids.includes(r.resident_id));
@@ -74,6 +79,7 @@ export const propertyTools: ToolDefinition[] = [
       "List residents for a property or a specific unit. Returns contact info and current balance due.",
     inputSchema: ListResidentsInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.listResidents(args);
       let out = residents;
       if (args.unit_id) out = out.filter(r => r.unit_id === args.unit_id);
       else if (args.property_id) out = out.filter(r => r.property_id === args.property_id);

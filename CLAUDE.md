@@ -13,7 +13,7 @@ This file is the handoff context for the Proprietio MCP server. Read it first be
 - Source repo: `https://github.com/yohanfettaya/proprietio-mcp`.
 - **18 tools** exposed, grouped: properties (5), accounting (6), maintenance (6), comms (1).
 - Hosted on **Render free tier** — instance spins down after ~15 min of inactivity, first call after sleep takes ~30s. Fine for demo, not for prod.
-- **Mock data only.** Every tool handler returns hardcoded fixtures. Backend wiring to the real Proprietio API is not done yet.
+- **Live backend wiring done (Phase 2, 2026-05-29).** All 18 handlers now call the real rentaly `/api/v1/*` API when `BACKEND_MODE=live`; the mock fixtures stay intact and serve when `BACKEND_MODE=mock` (the default). All HTTP, pagination, money (cents→dollars), and error mapping live in the single conversion point `src/api/rentaly-client.ts`. To go live in prod: set `RENTALY_API_BASE_URL` + `RENTALY_API_KEY` and flip `BACKEND_MODE=live` on Render, then `npm run smoke`.
 
 ---
 
@@ -31,7 +31,9 @@ Relevant env vars:
 |---|---|---|
 | `MCP_OAUTH_ENABLED` | `false` | Toggle OAuth metadata + token validation |
 | `DEMO_BEARER_TOKEN` | unset | Optional static bearer for gated demos |
-| `BACKEND_MODE` | `mock` | Switch to `live` once real API wiring lands |
+| `BACKEND_MODE` | `mock` | `live` = real rentaly API, `mock` = fixtures (default). Wiring is done; flip to `live` once the two vars below are set. |
+| `RENTALY_API_BASE_URL` | unset | rentaly API base, e.g. `https://app.proprietio.com/api`. Required when `BACKEND_MODE=live`. |
+| `RENTALY_API_KEY` | unset | `pk_live_…` key from the rentaly admin panel. Required when `BACKEND_MODE=live`. Set in the Render dashboard, never in code. |
 | `PORT` | `3000` | Render assigns this |
 
 ---
@@ -44,7 +46,15 @@ git clone https://github.com/yohanfettaya/proprietio-mcp
 cd proprietio-mcp
 npm install
 npm run dev      # starts server on :3000
-npm run demo     # in another terminal — exercises all 18 tools
+npm run demo     # in another terminal — exercises all 18 tools (mock data)
+```
+
+**Live backend smoke test (real rentaly API):**
+```bash
+RENTALY_API_BASE_URL=https://app.proprietio.com/api \
+RENTALY_API_KEY=pk_live_… \
+npm run smoke          # reads only — verifies auth, pagination, cents→dollars
+# add SMOKE_WRITES=1 to also create 1 work order + send 1 resident message
 ```
 
 **Production (Claude.ai):**
@@ -60,7 +70,7 @@ Confirmed end-to-end working in Claude.ai today (2026-05-29).
 
 In rough priority order:
 
-1. **Real backend wiring.** Replace mock handlers in `src/tools/*.ts` with calls to the Proprietio REST API. Flip `BACKEND_MODE=live`.
+1. ~~**Real backend wiring.** Replace mock handlers in `src/tools/*.ts` with calls to the Proprietio REST API.~~ **Done (2026-05-29)** — handlers branch on `BACKEND_MODE` and call `src/api/rentaly-client.ts`. Remaining: set `RENTALY_API_BASE_URL` + `RENTALY_API_KEY` on Render and flip `BACKEND_MODE=live`, then `npm run smoke`.
 2. **Real OAuth 2.0 server** at `auth.proprietio.com` — Authorization Code + PKCE, per-tool scopes, refresh tokens. Then flip `MCP_OAUTH_ENABLED=true`.
 3. **Move off Render free tier** — paid Render tier or migrate to AWS (ECS Fargate behind ALB). Kill spin-down behavior.
 4. **SOC 2 Type II** attestation. In progress, target Q3 2026.

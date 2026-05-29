@@ -6,6 +6,7 @@ import {
   UpdateWorkOrderInput, CloseWorkOrderInput, ListVendorsInput,
 } from "../types.js";
 import { workOrders, vendors, nextWorkOrderId } from "../data/mock.js";
+import { rentaly, isLiveBackend } from "../api/rentaly-client.js";
 import type { ToolDefinition } from "./index.js";
 
 export const maintenanceTools: ToolDefinition[] = [
@@ -15,6 +16,7 @@ export const maintenanceTools: ToolDefinition[] = [
       "Search work orders by property, status, priority, age, or category. Use min_days_open to surface stale tickets.",
     inputSchema: SearchWorkOrdersInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.searchWorkOrders(args);
       let out = [...workOrders];
       if (args.property_id) out = out.filter(w => w.property_id === args.property_id);
       if (args.status) out = out.filter(w => w.status === args.status);
@@ -29,6 +31,7 @@ export const maintenanceTools: ToolDefinition[] = [
     description: "Get full work order detail: timeline, vendor, photos (URLs), and resolution.",
     inputSchema: GetWorkOrderInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.getWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
       if (!wo) throw new Error(`Work order not found: ${args.work_order_id}`);
       const vendor = wo.assigned_vendor_id ? vendors.find(v => v.vendor_id === wo.assigned_vendor_id) : null;
@@ -41,6 +44,7 @@ export const maintenanceTools: ToolDefinition[] = [
       "Create a new work order. WRITE action — requires the 'maintenance:write' scope on the OAuth token.",
     inputSchema: CreateWorkOrderInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.createWorkOrder(args);
       const id = nextWorkOrderId();
       const now = new Date().toISOString();
       const wo = {
@@ -72,6 +76,7 @@ export const maintenanceTools: ToolDefinition[] = [
       "Update status, priority, assigned vendor, or append notes to a work order. WRITE action.",
     inputSchema: UpdateWorkOrderInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.updateWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
       if (!wo) throw new Error(`Work order not found: ${args.work_order_id}`);
       if (args.status) wo.status = args.status;
@@ -87,6 +92,7 @@ export const maintenanceTools: ToolDefinition[] = [
       "Close a work order with a resolution note. WRITE action.",
     inputSchema: CloseWorkOrderInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.closeWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
       if (!wo) throw new Error(`Work order not found: ${args.work_order_id}`);
       wo.status = "completed";
@@ -101,6 +107,7 @@ export const maintenanceTools: ToolDefinition[] = [
       "List approved vendors, optionally filtered by trade (plumbing, hvac, electrical, general).",
     inputSchema: ListVendorsInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.listVendors(args);
       let out = [...vendors];
       if (args.approved_only) out = out.filter(v => v.approved);
       if (args.trade) out = out.filter(v => v.trade === args.trade);

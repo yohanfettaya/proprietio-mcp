@@ -9,6 +9,7 @@ import {
   GetBalanceSheetInput, GetGeneralLedgerInput, GetNoiInput,
 } from "../types.js";
 import { properties, units, residents, leases } from "../data/mock.js";
+import { rentaly, isLiveBackend } from "../api/rentaly-client.js";
 import type { ToolDefinition } from "./index.js";
 
 function todayIso() {
@@ -31,6 +32,7 @@ export const accountingTools: ToolDefinition[] = [
       "Returns a rent roll snapshot: occupied units, contracted rent, market rent, and loss-to-lease for a property or portfolio.",
     inputSchema: GetRentRollInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.getRentRoll(args);
       const asOf = args.as_of_date ?? todayIso();
       const inScopeUnits = units.filter(u => inScope(args.scope_id, u.property_id));
       const occupied = inScopeUnits.filter(u => u.occupied);
@@ -64,6 +66,7 @@ export const accountingTools: ToolDefinition[] = [
       "Delinquency aging report (0-30, 31-60, 61-90, 90+) for a property or portfolio. Groupable by property, unit, or resident.",
     inputSchema: GetDelinquencyInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.getDelinquency(args);
       const asOf = args.as_of_date ?? todayIso();
       const delinquentResidents = residents.filter(r => r.balance_due > 0 && inScope(args.scope_id, r.property_id));
 
@@ -131,6 +134,7 @@ export const accountingTools: ToolDefinition[] = [
       "Profit & loss for a property or portfolio over a date range. Returns revenue, operating expenses, NOI, and margins.",
     inputSchema: GetIncomeStatementInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.getIncomeStatement(args);
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
       // months in period (inclusive month buckets)
       const start = new Date(args.period_start);
@@ -178,6 +182,7 @@ export const accountingTools: ToolDefinition[] = [
       "Balance sheet as of a date: total assets (real estate + cash), liabilities (mortgages), and equity.",
     inputSchema: GetBalanceSheetInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.getBalanceSheet(args);
       const asOf = args.as_of_date ?? todayIso();
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
       const realEstate = inScopeProps.reduce((s, p) => s + p.current_value, 0);
@@ -202,6 +207,7 @@ export const accountingTools: ToolDefinition[] = [
       "Returns GL entries for a scope, filtered by account and date range. Useful for transaction-level audits.",
     inputSchema: GetGeneralLedgerInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.getGeneralLedger(args);
       const accounts = [
         "4000-Rental Income",
         "4100-Late Fees",
@@ -250,6 +256,7 @@ export const accountingTools: ToolDefinition[] = [
       "Net Operating Income for a property or portfolio over a date range. NOI = total revenue - operating expenses (excluding debt service & capex).",
     inputSchema: GetNoiInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.getNoi(args);
       // Reuse income statement logic for consistency
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
       const start = new Date(args.period_start);

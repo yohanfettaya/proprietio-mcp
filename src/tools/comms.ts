@@ -3,6 +3,7 @@
  */
 import { SendMessageInput } from "../types.js";
 import { residents, vendors } from "../data/mock.js";
+import { rentaly, isLiveBackend } from "../api/rentaly-client.js";
 import type { ToolDefinition } from "./index.js";
 
 export const commsTools: ToolDefinition[] = [
@@ -12,6 +13,7 @@ export const commsTools: ToolDefinition[] = [
       "Send a message to a resident or vendor through Proprietio's messaging system. WRITE action — requires 'communications:write' scope.",
     inputSchema: SendMessageInput,
     handler: (args) => {
+      if (isLiveBackend()) return rentaly.sendMessage(args);
       let recipient: { id: string; name: string; channel: string } | null = null;
       if (args.to_resident_id) {
         const r = residents.find(x => x.resident_id === args.to_resident_id);
