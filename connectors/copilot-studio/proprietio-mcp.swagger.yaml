@@ -1,0 +1,64 @@
+swagger: '2.0'
+info:
+  title: Proprietio
+  description: >-
+    Property management, accounting, and maintenance connector for Microsoft 365
+    Copilot. Exposes the live Proprietio MCP server (18 tools) over Streamable
+    HTTP. Query and act on your portfolio in natural language: properties &
+    leasing, GL / rent roll / P&L / NOI / delinquency, work orders & vendors,
+    and resident/vendor messaging. Multi-tenant: the OAuth token resolves to one
+    Proprietio organization; every call is scoped and audit-logged.
+  version: '1.0'
+  contact:
+    name: Proprietio
+    email: yohan@proprietio.com
+    url: https://developers.proprietio.com/mcp
+# Host = the MCP server. The OAuth Authorization Server is api.proprietio.com
+# (see securityDefinitions); the two are intentionally different services.
+host: mcp.proprietio.com
+basePath: /
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /mcp:
+    post:
+      summary: Proprietio MCP server (Streamable HTTP)
+      description: >-
+        Single MCP endpoint. Copilot Studio negotiates the MCP protocol
+        (initialize, tools/list, tools/call) over this path. The
+        x-ms-agentic-protocol marker tells Power Platform / Copilot Studio to
+        treat this as a remote MCP server rather than a plain REST action.
+      operationId: InvokeMCP
+      # IMPORTANT: this extension is what makes Copilot Studio import the
+      # connector as an MCP server. Keep the value in lockstep with the current
+      # Copilot Studio docs (it has been "mcp-streamable-1.0").
+      x-ms-agentic-protocol: mcp-streamable-1.0
+      responses:
+        '200':
+          description: MCP response stream
+securityDefinitions:
+  oauth2_auth:
+    type: oauth2
+    # Authorization Code + PKCE (S256) against the Proprietio OAuth 2.1 server.
+    flow: accessCode
+    authorizationUrl: https://api.proprietio.com/oauth/authorize
+    tokenUrl: https://api.proprietio.com/oauth/token
+    scopes:
+      # Reads — recommend granting these for a pilot.
+      'properties:read': Read properties, units, and leases
+      'tenants:read': Read residents / tenants
+      'accounting:read': Read rent roll, delinquency, P&L, balance sheet, GL, NOI
+      'maintenance:read': Read work orders and vendors
+      # Writes — opt-in; grant only when you want Copilot to take action.
+      'maintenance:write': Create / update / close work orders
+      'communications:write': Send messages to residents / vendors
+security:
+  - oauth2_auth:
+      - 'properties:read'
+      - 'tenants:read'
+      - 'accounting:read'
+      - 'maintenance:read'
