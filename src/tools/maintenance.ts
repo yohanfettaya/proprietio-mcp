@@ -15,6 +15,7 @@ export const maintenanceTools: ToolDefinition[] = [
     description:
       "Search work orders by property, status, priority, age, or category. Use min_days_open to surface stale tickets.",
     inputSchema: SearchWorkOrdersInput,
+    annotations: { title: "Search work orders", readOnlyHint: true, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.searchWorkOrders(args);
       let out = [...workOrders];
@@ -30,6 +31,7 @@ export const maintenanceTools: ToolDefinition[] = [
     name: "proprietio_get_work_order",
     description: "Get full work order detail: timeline, vendor, photos (URLs), and resolution.",
     inputSchema: GetWorkOrderInput,
+    annotations: { title: "Get work order", readOnlyHint: true, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
@@ -43,6 +45,7 @@ export const maintenanceTools: ToolDefinition[] = [
     description:
       "Create a new work order. WRITE action — requires the 'maintenance:write' scope on the OAuth token.",
     inputSchema: CreateWorkOrderInput,
+    annotations: { title: "Create work order", readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.createWorkOrder(args);
       const id = nextWorkOrderId();
@@ -75,6 +78,7 @@ export const maintenanceTools: ToolDefinition[] = [
     description:
       "Update status, priority, assigned vendor, or append notes to a work order. WRITE action.",
     inputSchema: UpdateWorkOrderInput,
+    annotations: { title: "Update work order", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.updateWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
@@ -91,6 +95,7 @@ export const maintenanceTools: ToolDefinition[] = [
     description:
       "Close a work order with a resolution note. WRITE action.",
     inputSchema: CloseWorkOrderInput,
+    annotations: { title: "Close work order", readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.closeWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
@@ -106,6 +111,7 @@ export const maintenanceTools: ToolDefinition[] = [
     description:
       "List approved vendors, optionally filtered by trade (plumbing, hvac, electrical, general).",
     inputSchema: ListVendorsInput,
+    annotations: { title: "List vendors", readOnlyHint: true, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.listVendors(args);
       let out = [...vendors];
