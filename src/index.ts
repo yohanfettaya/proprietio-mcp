@@ -92,6 +92,16 @@ async function startHttp() {
 
   app.get("/healthz", (_req, res) => res.json({ status: "ok" }));
 
+  // --- OpenAI App Directory domain-verification challenge ---
+  // OpenAI proves we control mcp.proprietio.com by fetching this fixed path and
+  // checking it returns this exact token as raw text. It is a public proof of
+  // ownership (not a secret) and MUST be: unauthenticated, no redirect, HTTP 200,
+  // Content-Type text/plain, body = the token and nothing else. Keep it mounted
+  // ABOVE the bearer-protected /mcp routes so it stays open.
+  app.get("/.well-known/openai-apps-challenge", (_req, res) => {
+    res.type("text/plain").send("5ci1eYSh12rrsB__nt90KEhQ9gLFmREWo27he9vkQhc");
+  });
+
   // --- OAuth 2.0 discovery (only when a real OAuth server is configured) ---
   if (process.env.MCP_OAUTH_ENABLED === "true") {
     app.get("/.well-known/oauth-authorization-server", (_req, res) => {
