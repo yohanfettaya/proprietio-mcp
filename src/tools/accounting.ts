@@ -31,7 +31,7 @@ export const accountingTools: ToolDefinition[] = [
     description:
       "Returns a rent roll snapshot: occupied units, contracted rent, market rent, and loss-to-lease for a property or portfolio.",
     inputSchema: GetRentRollInput,
-    annotations: { title: "Get rent roll", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get rent roll", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getRentRoll(args);
       const asOf = args.as_of_date ?? todayIso();
@@ -66,7 +66,7 @@ export const accountingTools: ToolDefinition[] = [
     description:
       "Delinquency aging report (0-30, 31-60, 61-90, 90+) for a property or portfolio. Groupable by property, unit, or resident.",
     inputSchema: GetDelinquencyInput,
-    annotations: { title: "Get delinquency", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get delinquency", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getDelinquency(args);
       const asOf = args.as_of_date ?? todayIso();
@@ -135,7 +135,7 @@ export const accountingTools: ToolDefinition[] = [
     description:
       "Profit & loss for a property or portfolio over a date range. Returns revenue, operating expenses, NOI, and margins.",
     inputSchema: GetIncomeStatementInput,
-    annotations: { title: "Get income statement", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get income statement", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getIncomeStatement(args);
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
@@ -184,7 +184,7 @@ export const accountingTools: ToolDefinition[] = [
     description:
       "Balance sheet as of a date: total assets (real estate + cash), liabilities (mortgages), and equity.",
     inputSchema: GetBalanceSheetInput,
-    annotations: { title: "Get balance sheet", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get balance sheet", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getBalanceSheet(args);
       const asOf = args.as_of_date ?? todayIso();
@@ -210,7 +210,7 @@ export const accountingTools: ToolDefinition[] = [
     description:
       "Returns GL entries for a scope, filtered by account and date range. Useful for transaction-level audits.",
     inputSchema: GetGeneralLedgerInput,
-    annotations: { title: "Get general ledger", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get general ledger", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getGeneralLedger(args);
       const accounts = [
@@ -260,7 +260,7 @@ export const accountingTools: ToolDefinition[] = [
     description:
       "Net Operating Income for a property or portfolio over a date range. NOI = total revenue - operating expenses (excluding debt service & capex).",
     inputSchema: GetNoiInput,
-    annotations: { title: "Get NOI", readOnlyHint: true, openWorldHint: false },
+    annotations: { title: "Get NOI", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getNoi(args);
       // Reuse income statement logic for consistency
