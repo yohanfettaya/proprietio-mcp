@@ -137,15 +137,28 @@ Once Claude is connected, try:
 
 ## Authentication
 
-### Demo mode
+### Production mode — OAuth 2.1 (live since 2026-05-31)
 
-Set `DEMO_BEARER_TOKEN` in `.env` to require `Authorization: Bearer <token>` on every tool call. Leave empty for fully open demo.
+Set `MCP_OAUTH_ENABLED=true` and the connector runs in real OAuth mode. The Authorization
+Server is **rentaly** at `OAUTH_ISSUER=https://api.proprietio.com` (not an external IdP):
+Authorization Code + PKCE (S256 only), Dynamic Client Registration (RFC 7591), rotating
+refresh tokens, discovery per RFC 8414/9728. The connector requires a bearer on `/mcp`
+(absent → 401 + `WWW-Authenticate`, so the client starts the flow), then forwards it
+verbatim to rentaly via a per-request `AsyncLocalStorage` context (never stored). rentaly
+resolves `token → organizationId` and enforces scopes per route — the real boundary.
 
-### Production mode
+Scopes: `properties:read`, `tenants:read`, `accounting:read`, `maintenance:read`,
+`maintenance:write`, `communications:write` (14 read tools, 4 write). `src/scopes.ts`
+mirrors the tool→scope map advisory-only, to name a missing scope in the error.
 
-Replace the `bearerAuth` middleware in `src/auth.ts` with a real OAuth 2.0 introspection call against the Proprietio auth server (`OAUTH_ISSUER`).
+### Demo / open mode (local dev)
 
-Scopes implemented: `properties:read`, `tenants:read`, `accounting:read`, `maintenance:read`, `maintenance:write`, `communications:write`. PKCE required (S256), refresh tokens rotate.
+With `MCP_OAUTH_ENABLED` unset: set `DEMO_BEARER_TOKEN` to require a single static
+`Authorization: Bearer <token>`, or leave both unset for a fully open local demo. Rolling
+`MCP_OAUTH_ENABLED` back to unset/`false` is a backward-compatible production rollback.
+
+Multi-channel distribution (Claude / ChatGPT Apps SDK / Microsoft Copilot) and the
+per-channel submission packets live in [`docs/distribution-strategy.md`](docs/distribution-strategy.md).
 
 ---
 
