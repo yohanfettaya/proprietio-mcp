@@ -3,9 +3,19 @@
 Single source of truth for distributing the Proprietio MCP server to AI assistant
 directories: **Claude (Anthropic), ChatGPT (OpenAI Apps SDK), Microsoft Copilot.**
 
-Status: 2026-05-31 · grounded in the live `proprietio-mcp` source. Supersedes the
-standalone ChatGPT/Copilot planning docs, which contained inaccurate repo paths
+Status: 2026-05-31 (rev. B) · grounded in the live `proprietio-mcp` source. Supersedes
+the standalone ChatGPT/Copilot planning docs, which contained inaccurate repo paths
 (see §2).
+
+> **Rev. B — the shared blocker is gone.** OAuth 2.1 shipped to production on 2026-05-31.
+> rentaly (`api.proprietio.com`) is the live Authorization Server (Auth Code + PKCE S256,
+> DCR per RFC 7591, refresh rotation, discovery RFC 8414/9728). The connector forwards the
+> per-user bearer; rentaly resolves `token → organizationId` and enforces the 6 scopes. The
+> Claude.ai connector is verified end-to-end in OAuth mode. **§5 is now a record of what was
+> built, not a design.** The remaining work for ChatGPT and Copilot is **collateral and
+> compliance only — no engineering blocker remains.** Per-channel submission packets:
+> [`chatgpt-apps-sdk-submission.md`](./chatgpt-apps-sdk-submission.md) ·
+> [`copilot-submission.md`](./copilot-submission.md).
 
 ---
 
@@ -14,10 +24,10 @@ standalone ChatGPT/Copilot planning docs, which contained inaccurate repo paths
 ChatGPT Apps SDK and Microsoft Copilot both consume **the same thing Claude already
 consumes: an MCP server over Streamable HTTP.** We have that, live at
 `https://mcp.proprietio.com/mcp`, wired to the real backend (`BACKEND_MODE=live`).
-So ~85% reuses across all three channels with **zero** server changes. There is exactly
-**one shared engineering blocker — a real OAuth 2.1 server** — and building it unlocks
-all three directories at once. Everything else is additive metadata (done — see §4) or
-non-engineering submission collateral.
+So ~85% reuses across all three channels with **zero** server changes. The one shared
+engineering blocker — a real OAuth 2.1 server — **shipped to prod on 2026-05-31** and
+unlocked all three directories at once. Everything left is additive metadata (done — see §4)
+or non-engineering submission collateral (the per-channel packets in §6).
 
 **Three rules that hold for every channel:**
 1. **One tool set, never renamed.** The 18 `proprietio_*` names are the frozen public
@@ -100,8 +110,8 @@ Transport (stateless Streamable HTTP), the 18 tools + Zod input schemas, the
 **Deferred to V2 (per channel):** ChatGPT `ui://` widget resources +
 `_meta["openai/outputTemplate"]`; Copilot Adaptive Cards. Tool-only apps list fine.
 
-### C. Missing for any public listing — the shared blocker + collateral
-- **OAuth 2.1 server** (§5) — the only engineering blocker, shared by all three.
+### C. Missing for any public listing — collateral (the blocker is cleared)
+- ~~**OAuth 2.1 server** (§5)~~ — **SHIPPED 2026-05-31.** No longer blocking.
 - Demo org/account that works without MFA/SMS/email (reviewer access).
 - Privacy policy URL + data-handling disclosure (partly covered by the `ApiAccessLog`
   trail already shipped).
@@ -112,54 +122,58 @@ Transport (stateless Streamable HTTP), the 18 tools + Zod input schemas, the
 
 ---
 
-## 5. The shared blocker: OAuth 2.1 (design)
+## 5. The shared blocker: OAuth 2.1 — SHIPPED 2026-05-31
 
-Today: open demo mode. `bearerAuth` passes through when `DEMO_BEARER_TOKEN` is unset;
-OAuth metadata is gated behind `MCP_OAUTH_ENABLED=false`; `auth.proprietio.com` endpoints
-in `src/auth.ts` are placeholders. The live Claude connector relies on this open mode, so
-**nothing flips on in prod until the AS is built and tested.**
+**Decision taken:** option (a) — rentaly **IS** the Authorization Server. No external IdP,
+no standalone `auth.proprietio.com` service. Least new infra; reuses the existing Postgres,
+user login, and sessions. State lives in three Prisma models (`OAuthClient` /
+`OAuthAuthCode` / `OAuthToken`). This is one build that lit up all three directories.
 
-### Target flow
-1. ChatGPT/Copilot/Claude discovers auth via the two `.well-known` docs (already
-   scaffolded in `src/auth.ts`).
-2. **Dynamic Client Registration** (RFC 7591) — ChatGPT requires it; clients self-register.
-3. **Authorization Code + PKCE (S256)** — user logs into Proprietio, consents to scopes.
-4. Token issued, scoped to one `organizationId`. Refresh tokens for long-lived sessions.
-5. MCP server validates the token → resolves `organizationId` → injects **that org's**
-   rentaly `X-Api-Key` into `rentaly-client`. (Today a single env key serves one org;
-   this is what makes it genuinely multi-tenant.)
-6. Per-tool scopes already enumerated in `authorizationServerMetadata()` — wire enforcement
-   (`properties:read`, `accounting:read`, `maintenance:write`, `communications:write`, …).
+### What's live (issuer = `https://api.proprietio.com`)
+1. **Discovery** — `GET /.well-known/oauth-authorization-server` (RFC 8414) on the issuer
+   and `GET /.well-known/oauth-protected-resource` (RFC 9728) on the resource. Both **200**
+   in prod. The connector advertises the resource doc and 401s with `WWW-Authenticate` when
+   a bearer is absent, so any MCP client auto-starts the flow.
+2. **Dynamic Client Registration** (RFC 7591) at `/oauth/register` — ChatGPT and Claude
+   both self-register; no manual client provisioning.
+3. **Authorization Code + PKCE (S256 only)** — `/oauth/authorize` renders a stateless
+   consent screen (signed ticket JWT, no server session) → `/oauth/token` issues the token.
+4. **Refresh rotation** on `/oauth/token`; **revocation** (RFC 7009) on `/oauth/revoke`.
+5. **Token → `organizationId`** resolution at rentaly: the connector forwards the bearer
+   verbatim (via an `AsyncLocalStorage` request context, never stored), and `/api/v1/*`
+   resolves the org and **enforces the 6 scopes** per route — the real boundary. The
+   connector's `src/scopes.ts` mirrors the map advisory-only, to name a missing scope in
+   the error Claude shows.
+
+### The 6 scopes (frozen vocabulary, lockstep with rentaly `oauthConfig.js`)
+`properties:read` · `tenants:read` · `accounting:read` · `maintenance:read` ·
+`maintenance:write` · `communications:write` → 14 read tools, 4 write tools.
 
 ### Multi-tenancy = token, not URL
-Tenant identity rides in the token. **No `/{workspace}/mcp` URL templating is needed.**
-Copilot's Entra ID is just a *federation bridge* on top: Entra `tid` → Proprietio
-`organizationId`, same resolution table.
+Tenant identity rides in the token. **No `/{workspace}/mcp` URL templating.** Copilot's
+Entra ID is just a *federation bridge* layered on top: Entra `tid` → Proprietio
+`organizationId`, same resolution table — see `copilot-submission.md` §3.
 
-### Decisions needed before writing the AS (the 2 that gate the build)
-1. **Where does the authorization server run?**
-   - (a) Inside the rentaly backend (Postgres already there for client/token/consent
-     storage; reuses existing user login + sessions) — **recommended**, least new infra.
-   - (b) A standalone `auth.proprietio.com` service.
-   - (c) An external IdP (Auth0/WorkOS/Stytch) — fastest to DCR-compliant, monthly cost.
-2. **Token/state store** (DCR clients, auth codes, refresh tokens, org mapping): if (a),
-   new Prisma models in rentaly; if (c), the vendor holds it.
-
-Once (1) is picked, the AS implementation is the next focused build. It is **HIGH effort**
-but it is *one* build for *three* listings — the single highest-leverage item in the plan.
+### Operational toggles (both Render services)
+`MCP_OAUTH_ENABLED=true` flips OAuth on; setting it to `false`/unset rolls back to
+`X-Api-Key`/demo mode, fully backward-compatible. rentaly reads `MCP_OAUTH_ISSUER` /
+`MCP_OAUTH_RESOURCE_URL` / `JWT_SECRET`; the connector reads `OAUTH_ISSUER` /
+`MCP_RESOURCE_URL` / `RENTALY_API_BASE_URL` (keep the `/api` suffix).
 
 ---
 
-## 6. Roadmap (OAuth-first)
+## 6. Roadmap (OAuth-first) — blocker cleared
 
-1. **DONE — Phase 0:** annotations + `structuredContent` (this PR). Channel-agnostic.
-2. **NOW — OAuth 2.1 + DCR + per-org key mapping.** Pick the §5 hosting decision, build,
-   keep behind `MCP_OAUTH_ENABLED` until tested, then flip. Unlocks all three.
-3. **ChatGPT submission** — lightest incremental once OAuth lands: collateral + validated
-   test prompts. Broad audience.
-4. **Copilot Path A** (Copilot Studio MCP connector + Entra ID) in parallel with the
-   Microsoft compliance dossier (Partner Center, MACE); SOC 2 as background work gating
-   real enterprise deals.
+1. **DONE — Phase 0:** annotations + `structuredContent`. Channel-agnostic.
+2. **DONE — OAuth 2.1 + DCR + per-org token resolution.** rentaly = AS (option a). Shipped
+   and flipped on in prod 2026-05-31; Claude.ai verified end-to-end. Unlocked all three.
+3. **NOW — ChatGPT submission** — collateral + validated test prompts. Packet ready:
+   [`chatgpt-apps-sdk-submission.md`](./chatgpt-apps-sdk-submission.md). The lightest
+   channel now that OAuth is live (Apps SDK consumes our MCP + DCR + PKCE as-is).
+4. **NOW — Copilot Path A** (Copilot Studio MCP connector + Entra ID federation) in parallel
+   with the Microsoft compliance dossier (Partner Center, MACE); SOC 2 as background work
+   gating real enterprise deals. Packet ready:
+   [`copilot-submission.md`](./copilot-submission.md).
 5. **V2 UI** — ChatGPT widgets and/or Copilot Adaptive Cards, only where conversion
    justifies it. **Copilot Path B** (Teams app + Graph) only if Copilot converts.
 
@@ -170,12 +184,13 @@ but it is *one* build for *three* listings — the single highest-leverage item 
 | Module | Difficulty | Status |
 |---|---|---|
 | Reuse transport / tools / backend / health | none | done |
-| Annotations + `structuredContent` | LOW | **done (this PR)** |
-| OAuth 2.1 + DCR + per-org key mapping | **HIGH** | next — gated on §5 decision |
-| ChatGPT collateral + test prompts | LOW–MED | after OAuth |
-| Copilot: Entra ID + Partner Center + MACE | MED–HIGH | after OAuth, parallel |
+| Annotations + `structuredContent` | LOW | **done** |
+| OAuth 2.1 + DCR + per-org token resolution | **HIGH** | **done — shipped 2026-05-31** |
+| ChatGPT collateral + test prompts | LOW–MED | **packet ready** → submit |
+| Copilot: Entra ID + Partner Center + MACE | MED–HIGH | **packet ready** → in flight |
 | SOC 2 Type II (enterprise gate) | external | in progress, Q3 2026 |
 | ChatGPT widgets / Copilot Adaptive Cards | MED–HIGH | V2, deferred |
 
-**Net:** one MCP server, three directories, one shared blocker (OAuth). Phase 0 is shipped;
-OAuth is the critical path and needs a single hosting decision to start.
+**Net:** one MCP server, three directories, one shared blocker (OAuth) — **now cleared.**
+Both Phase 0 and the OAuth critical path are shipped. What remains is non-engineering:
+submit the ChatGPT packet, drive the Copilot compliance dossier, finish SOC 2.
