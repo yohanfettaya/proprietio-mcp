@@ -19,6 +19,7 @@
  */
 import { z } from "zod";
 import * as T from "../types.js";
+import { getRequestBearer } from "../context.js";
 
 /** True when the server should hit the real rentaly API instead of mock data. */
 export function isLiveBackend(): boolean {
@@ -27,7 +28,7 @@ export function isLiveBackend(): boolean {
 
 interface RentalyConfig {
   baseUrl: string;
-  apiKey: string;
+  apiKey: string | undefined;
 }
 
 function config(): RentalyConfig {
@@ -35,12 +36,15 @@ function config(): RentalyConfig {
   const apiKey = process.env.RENTALY_API_KEY;
   if (!baseUrl) {
     throw new Error(
-      "RENTALY_API_BASE_URL is not set — required when BACKEND_MODE=live (e.g. https://app.proprietio.com/api)",
+      "RENTALY_API_BASE_URL is not set — required when BACKEND_MODE=live (e.g. https://api.proprietio.com)",
     );
   }
-  if (!apiKey) {
+  // apiKey may be absent when each request forwards an end-user OAuth bearer
+  // (MCP_OAUTH_ENABLED mode). The static key is the service-account fallback for
+  // demo / non-OAuth deployments; we only demand one if no bearer is in context.
+  if (!apiKey && !getRequestBearer()) {
     throw new Error(
-      "RENTALY_API_KEY is not set — required when BACKEND_MODE=live (a pk_live_… key from the rentaly admin panel)",
+      "No credential available — set RENTALY_API_KEY (service key) or forward an end-user OAuth bearer token (MCP_OAUTH_ENABLED).",
     );
   }
   return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
@@ -68,12 +72,21 @@ async function call(method: string, path: string, opts: CallOptions = {}): Promi
     }
   }
 
+  // Credential precedence: when this request forwards an end-user OAuth bearer
+  // (MCP_OAUTH_ENABLED), use it so rentaly resolves token → organizationId and
+  // enforces per-tool scope. Otherwise fall back to the service-account
+  // X-Api-Key (demo / non-OAuth deployments).
+  const bearer = getRequestBearer();
+  const authHeaders: Record<string, string> = bearer
+    ? { Authorization: `Bearer ${bearer}` }
+    : { "X-Api-Key": apiKey as string };
+
   let res: Response;
   try {
     res = await fetch(url, {
       method,
       headers: {
-        "X-Api-Key": apiKey,
+        ...authHeaders,
         "Content-Type": "application/json",
         Accept: "application/json",
       },

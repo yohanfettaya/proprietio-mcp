@@ -11,6 +11,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { allTools } from "./tools/index.js";
+import { scopeForTool } from "./scopes.js";
 
 const SERVER_NAME = process.env.MCP_SERVER_NAME ?? "proprietio-mcp";
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION ?? "0.1.0";
@@ -75,7 +76,14 @@ export function createServer(): Server {
         ...(structured ? { structuredContent: structured } : {}),
       };
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+      let msg = err instanceof Error ? err.message : String(err);
+      // Enrich a scope rejection with the exact scope this tool needs, so Claude
+      // can tell the user which consent to grant. rentaly is the enforcement
+      // boundary (it 403s insufficient_scope); we only name the missing scope.
+      const scope = scopeForTool(tool.name);
+      if (scope && /forbidden|insufficient_scope|missing the required scope/i.test(msg)) {
+        msg += ` (this tool requires the "${scope}" scope — re-authorize the connector to grant it)`;
+      }
       return {
         isError: true,
         content: [{ type: "text", text: `Error in ${tool.name}: ${msg}` }],

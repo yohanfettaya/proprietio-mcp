@@ -21,19 +21,28 @@ export interface AuthConfig {
 }
 
 export function loadAuthConfig(): AuthConfig {
+  // The Authorization Server IS rentaly (api.proprietio.com) — see rentaly
+  // server/lib/oauthConfig.js. Discovery is RFC 8414 at the issuer root, so the
+  // endpoint paths below are advisory; Claude resolves them from the issuer's
+  // /.well-known/oauth-authorization-server. Defaults kept in lockstep anyway.
+  const issuer = process.env.OAUTH_ISSUER ?? "https://api.proprietio.com";
   return {
-    issuer: process.env.OAUTH_ISSUER ?? "https://auth.proprietio.com",
+    issuer,
     authorizationEndpoint:
-      process.env.OAUTH_AUTHORIZATION_ENDPOINT ??
-      "https://auth.proprietio.com/oauth/authorize",
+      process.env.OAUTH_AUTHORIZATION_ENDPOINT ?? `${issuer}/oauth/authorize`,
     tokenEndpoint:
-      process.env.OAUTH_TOKEN_ENDPOINT ?? "https://auth.proprietio.com/oauth/token",
+      process.env.OAUTH_TOKEN_ENDPOINT ?? `${issuer}/oauth/token`,
     revocationEndpoint:
-      process.env.OAUTH_REVOCATION_ENDPOINT ?? "https://auth.proprietio.com/oauth/revoke",
+      process.env.OAUTH_REVOCATION_ENDPOINT ?? `${issuer}/oauth/revoke`,
     demoBearerToken: process.env.DEMO_BEARER_TOKEN || undefined,
     resourceUrl:
       process.env.MCP_RESOURCE_URL ?? "https://mcp.proprietio.com/mcp",
   };
+}
+
+/** True when the connector runs in real OAuth mode (per-user bearer tokens). */
+export function isOAuthEnabled(): boolean {
+  return process.env.MCP_OAUTH_ENABLED === "true";
 }
 
 export function authorizationServerMetadata(cfg: AuthConfig) {
@@ -66,26 +75,51 @@ export function protectedResourceMetadata(cfg: AuthConfig) {
   };
 }
 
+/** Standard challenge header pointing Claude at the protected-resource metadata. */
+function challenge(res: Response, cfg: AuthConfig): void {
+  res.setHeader(
+    "WWW-Authenticate",
+    `Bearer realm="proprietio-mcp", resource_metadata="${cfg.resourceUrl}/.well-known/oauth-protected-resource"`,
+  );
+}
+
 /**
- * Bearer-token middleware.
+ * Bearer-token middleware. Three modes, in priority order:
  *
- * - In demo mode (DEMO_BEARER_TOKEN set), accepts that exact token.
- * - In production mode, callers should swap this for a real introspection call.
- * - When no token is configured, requests pass through (open demo).
+ *   1. OAuth mode (MCP_OAUTH_ENABLED=true) — require *a* bearer and forward it
+ *      verbatim to rentaly, which validates it (token → org) and enforces scope.
+ *      We don't introspect here; presence + downstream validation is the model.
+ *      Absent/malformed → 401 + WWW-Authenticate so Claude starts the OAuth flow.
+ *   2. Demo mode (DEMO_BEARER_TOKEN set) — accept that one static token.
+ *   3. Open mode (neither set) — pass through (local/dev demo).
  */
 export function bearerAuth(cfg: AuthConfig) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!cfg.demoBearerToken) return next(); // open mode
     const header = req.header("authorization") ?? "";
     const match = /^Bearer\s+(.+)$/i.exec(header);
+
+    if (isOAuthEnabled()) {
+      if (!match) {
+        challenge(res, cfg);
+        res.status(401).json({ error: "invalid_token" });
+        return;
+      }
+      return next(); // token forwarded downstream via request-auth context
+    }
+
+    if (!cfg.demoBearerToken) return next(); // open mode
+
     if (!match || match[1] !== cfg.demoBearerToken) {
-      res.setHeader(
-        "WWW-Authenticate",
-        `Bearer realm="proprietio-mcp", resource_metadata="${cfg.resourceUrl}/.well-known/oauth-protected-resource"`,
-      );
+      challenge(res, cfg);
       res.status(401).json({ error: "invalid_token" });
       return;
     }
     next();
   };
+}
+
+/** Extract the raw bearer token from a request, or undefined if absent. */
+export function extractBearer(req: Request): string | undefined {
+  const match = /^Bearer\s+(.+)$/i.exec(req.header("authorization") ?? "");
+  return match ? match[1] : undefined;
 }

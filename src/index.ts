@@ -19,7 +19,9 @@ import {
   authorizationServerMetadata,
   protectedResourceMetadata,
   bearerAuth,
+  extractBearer,
 } from "./auth.js";
+import { runWithRequestAuth } from "./context.js";
 import { allTools } from "./tools/index.js";
 
 const mode = process.argv[2] ?? "http";
@@ -78,7 +80,13 @@ async function startHttp() {
         server.close().catch(() => undefined);
       });
       await server.connect(transport);
-      await transport.handleRequest(req, res, req.body);
+      // Bind the end-user's bearer to the async context for the lifetime of this
+      // request so the rentaly client forwards it (token → org + scope at rentaly).
+      // The bearer is never stored beyond this scope.
+      const bearerToken = extractBearer(req);
+      await runWithRequestAuth({ bearerToken }, () =>
+        transport.handleRequest(req, res, req.body),
+      );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (!res.headersSent) {
