@@ -39,6 +39,44 @@ async function startHttp() {
   const port = parseInt(process.env.PORT ?? "3030", 10);
   const cfg = loadAuthConfig();
   const app = express();
+
+  // --- CORS ---
+  // Browser-side MCP clients (notably ChatGPT's Developer-mode connector) drive
+  // the discovery + /mcp + OAuth-challenge calls directly from their web origin
+  // (e.g. https://chatgpt.com), so without CORS headers the browser blocks the
+  // response and the connection fails. These endpoints authenticate by bearer /
+  // PKCE — never a cookie — so a permissive, credential-less policy is safe. We
+  // reflect the request Origin (not "*") and, crucially, EXPOSE WWW-Authenticate
+  // so the client can read the 401 challenge that bootstraps the OAuth flow.
+  // (Claude worked without this because it runs the flow server-side.)
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    } else {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    const reqHeaders = req.headers["access-control-request-headers"];
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      typeof reqHeaders === "string"
+        ? reqHeaders
+        : "Authorization, Content-Type, Mcp-Session-Id, MCP-Protocol-Version",
+    );
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "WWW-Authenticate, Mcp-Session-Id, MCP-Protocol-Version",
+    );
+    res.setHeader("Access-Control-Max-Age", "600");
+    if (req.method === "OPTIONS") {
+      res.status(204).end();
+      return;
+    }
+    next();
+  });
+
   app.use(express.json({ limit: "2mb" }));
 
   // --- Health & meta ---
