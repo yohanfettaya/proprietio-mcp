@@ -59,9 +59,21 @@ async function startHttp() {
     app.get("/.well-known/oauth-authorization-server", (_req, res) => {
       res.json(authorizationServerMetadata(cfg));
     });
-    app.get("/.well-known/oauth-protected-resource", (_req, res) => {
+    // Protected-resource metadata (RFC 9728). Serve it at EVERY path a client may
+    // probe, because they disagree on where to look for a resource with a path
+    // (`/mcp`):
+    //   - root  `/.well-known/oauth-protected-resource`            (Claude's default)
+    //   - our own `WWW-Authenticate` advertises the resource-suffixed form
+    //     `/mcp/.well-known/oauth-protected-resource`              (ChatGPT follows it
+    //     verbatim — a 404 here is what broke the ChatGPT connector)
+    //   - RFC 9728 canonical, well-known inserted before the path
+    //     `/.well-known/oauth-protected-resource/mcp`
+    const protectedResource = (_req: express.Request, res: express.Response) => {
       res.json(protectedResourceMetadata(cfg));
-    });
+    };
+    app.get("/.well-known/oauth-protected-resource", protectedResource);
+    app.get("/mcp/.well-known/oauth-protected-resource", protectedResource);
+    app.get("/.well-known/oauth-protected-resource/mcp", protectedResource);
   }
 
   // --- MCP endpoint (Streamable HTTP) ---
