@@ -12,6 +12,7 @@ export const commsTools: ToolDefinition[] = [
     description:
       "Send a message to a resident or vendor through Proprietio's messaging system. WRITE action — requires 'communications:write' scope.",
     inputSchema: SendMessageInput,
+    annotations: { title: "Send message", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.sendMessage(args);
       let recipient: { id: string; name: string; channel: string } | null = null;

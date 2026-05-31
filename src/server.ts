@@ -30,6 +30,9 @@ export function createServer(): Server {
         target: "openApi3",
         $refStrategy: "none",
       }) as Record<string, unknown>,
+      // Behaviour hints — read by ChatGPT Apps SDK / Claude for safety gating.
+      // Additive only; never affects the frozen tool name or input schema.
+      ...(t.annotations ? { annotations: t.annotations } : {}),
     })),
   }));
 
@@ -57,10 +60,19 @@ export function createServer(): Server {
         };
       }
       const result = await tool.handler(parsed.data);
+      // Emit machine-readable structuredContent alongside the text block so
+      // clients (ChatGPT Apps SDK especially) parse fields deterministically
+      // instead of re-reading the JSON prose. Only attach it for plain object
+      // results — the spec requires structuredContent to be an object.
+      const structured =
+        result && typeof result === "object" && !Array.isArray(result)
+          ? (result as Record<string, unknown>)
+          : undefined;
       return {
         content: [
           { type: "text", text: JSON.stringify(result, null, 2) },
         ],
+        ...(structured ? { structuredContent: structured } : {}),
       };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
