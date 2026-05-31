@@ -99,7 +99,7 @@ async function startHttp() {
   // Content-Type text/plain, body = the token and nothing else. Keep it mounted
   // ABOVE the bearer-protected /mcp routes so it stays open.
   app.get("/.well-known/openai-apps-challenge", (_req, res) => {
-    res.type("text/plain").send("5ci1eYSh12rrsB__nt90KEhQ9gLFmREWo27he9vkQhc");
+    res.type("text/plain").send("5ci1eYSh12rrsB__nt9OKEhQ9gLFmREWo27he9vkQhc");
   });
 
   // --- OAuth 2.0 discovery (only when a real OAuth server is configured) ---
