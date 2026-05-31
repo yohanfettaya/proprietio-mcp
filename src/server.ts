@@ -27,8 +27,16 @@ export function createServer(): Server {
     tools: allTools.map((t) => ({
       name: t.name,
       description: t.description,
+      // Emit standards-compliant JSON Schema (draft-07), NOT OpenAPI 3.0.
+      // The `openApi3` target serialises numeric bounds the OpenAPI/draft-04 way
+      // — e.g. `exclusiveMinimum: true` (a boolean) alongside `minimum`. That is
+      // INVALID under JSON Schema draft-07/2020-12, which MCP clients validate
+      // against. Claude tolerated it; ChatGPT's Apps SDK rejects the whole tool
+      // ("Invalid MCP tool schema for tool 'proprietio_get_general_ledger'").
+      // The default target emits `exclusiveMinimum: 0` (numeric) — valid. This
+      // changes only how the SAME Zod schema is serialised; no tool name or
+      // input field is touched (frozen-contract safe).
       inputSchema: zodToJsonSchema(t.inputSchema, {
-        target: "openApi3",
         $refStrategy: "none",
       }) as Record<string, unknown>,
       // Behaviour hints — read by ChatGPT Apps SDK / Claude for safety gating.
