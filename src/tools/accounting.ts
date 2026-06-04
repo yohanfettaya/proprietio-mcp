@@ -28,10 +28,11 @@ function inScope(scopeId: string, propertyId: string): boolean {
 export const accountingTools: ToolDefinition[] = [
   {
     name: "proprietio_get_rent_roll",
+    title: "Get Rent Roll Snapshot",
     description:
       "Returns a rent roll snapshot: occupied units, contracted rent, market rent, and loss-to-lease for a property or portfolio.",
     inputSchema: GetRentRollInput,
-    annotations: { title: "Get rent roll", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getRentRoll(args);
       const asOf = args.as_of_date ?? todayIso();
@@ -63,10 +64,11 @@ export const accountingTools: ToolDefinition[] = [
   },
   {
     name: "proprietio_get_delinquency",
+    title: "Get Delinquency Aging Report",
     description:
       "Delinquency aging report (0-30, 31-60, 61-90, 90+) for a property or portfolio. Groupable by property, unit, or resident.",
     inputSchema: GetDelinquencyInput,
-    annotations: { title: "Get delinquency", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getDelinquency(args);
       const asOf = args.as_of_date ?? todayIso();
@@ -132,10 +134,11 @@ export const accountingTools: ToolDefinition[] = [
   },
   {
     name: "proprietio_get_income_statement",
+    title: "Get Income Statement",
     description:
       "Profit & loss for a property or portfolio over a date range. Returns revenue, operating expenses, NOI, and margins.",
     inputSchema: GetIncomeStatementInput,
-    annotations: { title: "Get income statement", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getIncomeStatement(args);
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
@@ -181,10 +184,11 @@ export const accountingTools: ToolDefinition[] = [
   },
   {
     name: "proprietio_get_balance_sheet",
+    title: "Get Balance Sheet",
     description:
       "Balance sheet as of a date: total assets (real estate + cash), liabilities (mortgages), and equity.",
     inputSchema: GetBalanceSheetInput,
-    annotations: { title: "Get balance sheet", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getBalanceSheet(args);
       const asOf = args.as_of_date ?? todayIso();
@@ -207,10 +211,11 @@ export const accountingTools: ToolDefinition[] = [
   },
   {
     name: "proprietio_get_general_ledger",
+    title: "Get General Ledger Entries",
     description:
       "Returns GL entries for a scope, filtered by account and date range. Useful for transaction-level audits.",
     inputSchema: GetGeneralLedgerInput,
-    annotations: { title: "Get general ledger", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getGeneralLedger(args);
       const accounts = [
@@ -257,10 +262,11 @@ export const accountingTools: ToolDefinition[] = [
   },
   {
     name: "proprietio_get_noi",
+    title: "Get Net Operating Income",
     description:
       "Net Operating Income for a property or portfolio over a date range. NOI = total revenue - operating expenses (excluding debt service & capex).",
     inputSchema: GetNoiInput,
-    annotations: { title: "Get NOI", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getNoi(args);
       // Reuse income statement logic for consistency

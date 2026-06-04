@@ -26,6 +26,10 @@ export function createServer(): Server {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: allTools.map((t) => ({
       name: t.name,
+      // User-friendly display title (Anthropic Connectors directory requires it).
+      // Emitted both top-level and inside annotations.title for maximum client
+      // compatibility — the frozen contract is `name`, never `title`.
+      title: t.title,
       description: t.description,
       // Emit standards-compliant JSON Schema (draft-07), NOT OpenAPI 3.0.
       // The `openApi3` target serialises numeric bounds the OpenAPI/draft-04 way
@@ -39,9 +43,12 @@ export function createServer(): Server {
       inputSchema: zodToJsonSchema(t.inputSchema, {
         $refStrategy: "none",
       }) as Record<string, unknown>,
-      // Behaviour hints — read by ChatGPT Apps SDK / Claude for safety gating.
-      // Additive only; never affects the frozen tool name or input schema.
-      ...(t.annotations ? { annotations: t.annotations } : {}),
+      // Behaviour hints — read by the Anthropic Connectors directory / ChatGPT
+      // Apps SDK / Claude for safety gating. Additive only; never affects the
+      // frozen tool name or input schema. `title` is folded in here too so
+      // clients that read annotations.title (rather than the top-level field)
+      // still get the friendly label.
+      annotations: { title: t.title, ...(t.annotations ?? {}) },
     })),
   }));
 

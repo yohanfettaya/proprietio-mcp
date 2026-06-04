@@ -12,10 +12,11 @@ import type { ToolDefinition } from "./index.js";
 export const propertyTools: ToolDefinition[] = [
   {
     name: "proprietio_search_properties",
+    title: "Search Properties",
     description:
       "Search the Proprietio portfolio by city, state, owner, or unit count. Returns a list of matching properties with summary details.",
     inputSchema: SearchPropertiesInput,
-    annotations: { title: "Search properties", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.searchProperties(args);
       let out = [...properties];
@@ -29,10 +30,11 @@ export const propertyTools: ToolDefinition[] = [
   },
   {
     name: "proprietio_get_property",
+    title: "Get Property Details",
     description:
       "Get the full record for a single property, including its units and active leases.",
     inputSchema: GetPropertyInput,
-    annotations: { title: "Get property", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getProperty(args);
       const property = properties.find(p => p.property_id === args.property_id);
@@ -44,10 +46,11 @@ export const propertyTools: ToolDefinition[] = [
   },
   {
     name: "proprietio_list_units",
+    title: "List Units in a Property",
     description:
       "List all units in a property, with occupancy and current rent. Optionally filter to occupied units only.",
     inputSchema: ListUnitsInput,
-    annotations: { title: "List units", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.listUnits(args);
       let out = units.filter(u => u.property_id === args.property_id);
@@ -64,10 +67,11 @@ export const propertyTools: ToolDefinition[] = [
   },
   {
     name: "proprietio_get_lease",
+    title: "Get Lease Details",
     description:
       "Get full lease details: tenant, term, rent, deposit, and status.",
     inputSchema: GetLeaseInput,
-    annotations: { title: "Get lease", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getLease(args);
       const lease = leases.find(l => l.lease_id === args.lease_id);
@@ -79,10 +83,11 @@ export const propertyTools: ToolDefinition[] = [
   },
   {
     name: "proprietio_list_residents",
+    title: "List Residents",
     description:
       "List residents for a property or a specific unit. Returns contact info and current balance due.",
     inputSchema: ListResidentsInput,
-    annotations: { title: "List residents", readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.listResidents(args);
       let out = residents;

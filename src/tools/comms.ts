@@ -9,10 +9,14 @@ import type { ToolDefinition } from "./index.js";
 export const commsTools: ToolDefinition[] = [
   {
     name: "proprietio_send_message",
+    title: "Send Tenant or Vendor Message",
     description:
       "Send a message to a resident or vendor through Proprietio's messaging system. WRITE action — requires 'communications:write' scope.",
     inputSchema: SendMessageInput,
-    annotations: { title: "Send message", readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    // destructiveHint: true — the message reaches a real human and cannot be
+    // un-sent. openWorldHint: false — it still goes through the configured
+    // Proprietio backend, not an arbitrary external/web destination.
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     handler: (args) => {
       if (isLiveBackend()) return rentaly.sendMessage(args);
       let recipient: { id: string; name: string; channel: string } | null = null;
