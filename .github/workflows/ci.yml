@@ -1,0 +1,40 @@
+# Offline CI — typecheck + contract tests.
+#
+# Unlike smoke-live.yml (which hits the real prod backend and needs the
+# RENTALY_API_KEY secret), this job runs fully offline against the source, so
+# it can gate every pull request without exposing secrets to forks. It is the
+# green check the branch-protection rule waits on before merge.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck (tsc --noEmit)
+        run: npm run lint
+
+      - name: Build (tsc)
+        run: npm run build
+
+      - name: Contract tests (offline)
+        run: npm test
