@@ -14,11 +14,14 @@ export const commsTools: ToolDefinition[] = [
       "Send a message to a resident or vendor through Proprietio's messaging system. WRITE action — requires 'communications:write' scope.",
     inputSchema: SendMessageInput,
     // destructiveHint: true — the message reaches a real human and cannot be
-    // un-sent. openWorldHint: false — it still goes through the configured
-    // Proprietio backend, not an arbitrary external/web destination.
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    // un-sent. openWorldHint: true — delivery dispatches an external email to the
+    // tenant's or vendor's own inbox via the configured mail provider, landing
+    // outside our host environment. Per the MCP spec that is a true open-world
+    // interaction. This is the ONLY tool with openWorldHint=true; the other 17
+    // only ever touch the configured Proprietio backend.
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
     annotationRationale:
-      "Write with a real-world side effect: delivers a message to a resident or vendor, so readOnlyHint=false. destructiveHint=true — a sent message reaches a human and cannot be un-sent (irreversible effect), even though no stored record is overwritten or deleted. Non-idempotent (idempotentHint=false): each call sends another message. openWorldHint=false — delivery goes through the configured Proprietio comms backend, never an arbitrary web destination.",
+      "Write with a real-world side effect: delivers a message to a resident or vendor, so readOnlyHint=false. destructiveHint=true — a sent message reaches a human and cannot be un-sent (irreversible effect), even though no stored record is overwritten or deleted. Non-idempotent (idempotentHint=false): each call sends another message. openWorldHint=true — delivery dispatches an external email to the recipient's own inbox via the configured mail provider, reaching outside our host environment.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.sendMessage(args);
       let recipient: { id: string; name: string; channel: string } | null = null;

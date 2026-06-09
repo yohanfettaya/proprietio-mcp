@@ -15,11 +15,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { allTools } from "../src/tools/index.js";
 
-// The agreed mapping. openWorldHint is false for every tool (we only touch the
-// configured Proprietio backend, never the arbitrary web). idempotentHint:
-// every read is idempotent; among writes, only close_work_order converges to a
-// terminal state (re-closing is a no-op), while create/update/send each have a
-// fresh effect per call.
+// The agreed mapping. openWorldHint is false for every tool EXCEPT
+// proprietio_send_message: that tool dispatches an external email to the
+// recipient's own inbox via the configured mail provider, reaching outside our
+// host environment, which is a true open-world interaction per the MCP spec.
+// Every other tool only touches the configured Proprietio backend.
+// idempotentHint: every read is idempotent; among writes, only close_work_order
+// converges to a terminal state (re-closing is a no-op), while create/update/
+// send each have a fresh effect per call.
 const EXPECTED: Record<
   string,
   {
@@ -86,9 +89,14 @@ test("every tool has all 4 hint booleans defined (no null/undefined)", () => {
   }
 });
 
-test("openWorldHint is false for every tool", () => {
+test("openWorldHint is true only for proprietio_send_message (external email dispatch)", () => {
   for (const tool of allTools) {
-    assert.equal(tool.annotations.openWorldHint, false, `${tool.name}: openWorldHint must be false`);
+    const expectOpenWorld = tool.name === "proprietio_send_message";
+    assert.equal(
+      tool.annotations.openWorldHint,
+      expectOpenWorld,
+      `${tool.name}: openWorldHint should be ${expectOpenWorld}`,
+    );
   }
 });
 
@@ -139,7 +147,7 @@ test("titles and all four hints match the agreed mapping", () => {
     assert.equal(tool.annotations.readOnlyHint, want.readOnlyHint, `${tool.name}: readOnlyHint`);
     assert.equal(tool.annotations.destructiveHint, want.destructiveHint, `${tool.name}: destructiveHint`);
     assert.equal(tool.annotations.idempotentHint, want.idempotentHint, `${tool.name}: idempotentHint`);
-    assert.equal(tool.annotations.openWorldHint, false, `${tool.name}: openWorldHint`);
+    assert.equal(tool.annotations.openWorldHint, tool.name === "proprietio_send_message", `${tool.name}: openWorldHint`);
   }
   // Every expected tool was present (no silent drops).
   for (const name of Object.keys(EXPECTED)) {
