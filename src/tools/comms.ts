@@ -17,6 +17,8 @@ export const commsTools: ToolDefinition[] = [
     // un-sent. openWorldHint: false — it still goes through the configured
     // Proprietio backend, not an arbitrary external/web destination.
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    annotationRationale:
+      "Write with a real-world side effect: delivers a message to a resident or vendor, so readOnlyHint=false. destructiveHint=true — a sent message reaches a human and cannot be un-sent (irreversible effect), even though no stored record is overwritten or deleted. Non-idempotent (idempotentHint=false): each call sends another message. openWorldHint=false — delivery goes through the configured Proprietio comms backend, never an arbitrary web destination.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.sendMessage(args);
       let recipient: { id: string; name: string; channel: string } | null = null;

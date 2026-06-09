@@ -1,10 +1,12 @@
 /**
  * Contract test — MCP tool annotations.
  *
- * The Anthropic Connectors directory submission requires every tool to declare
- * a user-friendly `title` plus the behaviour hints `readOnlyHint`,
- * `destructiveHint`, and `openWorldHint`. This test fails CI if any tool is
- * missing one of those, or if a value drifts from the agreed mapping.
+ * The OpenAI Apps directory and the Anthropic Connectors directory both reject
+ * any tool whose behaviour hints are not EXPLICIT booleans: an omitted hint
+ * reads as "unknown", not as a safe default. (The original rejection was
+ * `idempotentHint` missing on the 14 read tools.) This test fails CI if any
+ * tool is missing a title, is missing/null on any of the four hints, lacks a
+ * behavioural rationale, or drifts from the agreed mapping.
  *
  * It runs fully OFFLINE (no backend, no secret) — unlike the live smoke — so it
  * gates every PR. Run with: `npm test`.
@@ -13,67 +15,131 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { allTools } from "../src/tools/index.js";
 
-// The agreed mapping (Phase 4). readOnlyHint / destructiveHint per tool;
-// openWorldHint is false for every tool (we only touch the configured
-// Proprietio backend, never the arbitrary web).
+// The agreed mapping. openWorldHint is false for every tool (we only touch the
+// configured Proprietio backend, never the arbitrary web). idempotentHint:
+// every read is idempotent; among writes, only close_work_order converges to a
+// terminal state (re-closing is a no-op), while create/update/send each have a
+// fresh effect per call.
 const EXPECTED: Record<
   string,
-  { title: string; readOnlyHint: boolean; destructiveHint: boolean }
+  {
+    title: string;
+    readOnlyHint: boolean;
+    destructiveHint: boolean;
+    idempotentHint: boolean;
+  }
 > = {
-  // Read-only
-  proprietio_search_properties: { title: "Search Properties", readOnlyHint: true, destructiveHint: false },
-  proprietio_get_property: { title: "Get Property Details", readOnlyHint: true, destructiveHint: false },
-  proprietio_list_units: { title: "List Units in a Property", readOnlyHint: true, destructiveHint: false },
-  proprietio_get_lease: { title: "Get Lease Details", readOnlyHint: true, destructiveHint: false },
-  proprietio_list_residents: { title: "List Residents", readOnlyHint: true, destructiveHint: false },
-  proprietio_get_rent_roll: { title: "Get Rent Roll Snapshot", readOnlyHint: true, destructiveHint: false },
-  proprietio_get_delinquency: { title: "Get Delinquency Aging Report", readOnlyHint: true, destructiveHint: false },
-  proprietio_get_income_statement: { title: "Get Income Statement", readOnlyHint: true, destructiveHint: false },
-  proprietio_get_balance_sheet: { title: "Get Balance Sheet", readOnlyHint: true, destructiveHint: false },
-  proprietio_get_general_ledger: { title: "Get General Ledger Entries", readOnlyHint: true, destructiveHint: false },
-  proprietio_get_noi: { title: "Get Net Operating Income", readOnlyHint: true, destructiveHint: false },
-  proprietio_search_work_orders: { title: "Search Work Orders", readOnlyHint: true, destructiveHint: false },
-  proprietio_get_work_order: { title: "Get Work Order Details", readOnlyHint: true, destructiveHint: false },
-  proprietio_list_vendors: { title: "List Approved Vendors", readOnlyHint: true, destructiveHint: false },
-  // Write, non-destructive
-  proprietio_create_work_order: { title: "Create Work Order", readOnlyHint: false, destructiveHint: false },
-  proprietio_update_work_order: { title: "Update Work Order", readOnlyHint: false, destructiveHint: false },
-  proprietio_close_work_order: { title: "Close Work Order", readOnlyHint: false, destructiveHint: false },
-  // Write, externally-impacting (reaches a real human)
-  proprietio_send_message: { title: "Send Tenant or Vendor Message", readOnlyHint: false, destructiveHint: true },
+  // Read-only (14) — all idempotent
+  proprietio_search_properties: { title: "Search Properties", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_get_property: { title: "Get Property Details", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_list_units: { title: "List Units in a Property", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_get_lease: { title: "Get Lease Details", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_list_residents: { title: "List Residents", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_get_rent_roll: { title: "Get Rent Roll Snapshot", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_get_delinquency: { title: "Get Delinquency Aging Report", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_get_income_statement: { title: "Get Income Statement", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_get_balance_sheet: { title: "Get Balance Sheet", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_get_general_ledger: { title: "Get General Ledger Entries", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_get_noi: { title: "Get Net Operating Income", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_search_work_orders: { title: "Search Work Orders", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_get_work_order: { title: "Get Work Order Details", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  proprietio_list_vendors: { title: "List Approved Vendors", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  // Write, non-destructive (3)
+  proprietio_create_work_order: { title: "Create Work Order", readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  proprietio_update_work_order: { title: "Update Work Order", readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+  proprietio_close_work_order: { title: "Close Work Order", readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  // Write, externally-impacting (reaches a real human) (1)
+  proprietio_send_message: { title: "Send Tenant or Vendor Message", readOnlyHint: false, destructiveHint: true, idempotentHint: false },
 };
+
+// The 14 read tools and 4 write tools, per the agreed contract.
+const READ_TOOLS = Object.entries(EXPECTED).filter(([, v]) => v.readOnlyHint).map(([k]) => k);
+const WRITE_TOOLS = Object.entries(EXPECTED).filter(([, v]) => !v.readOnlyHint).map(([k]) => k);
 
 test("all 18 tools are registered", () => {
   assert.equal(allTools.length, 18);
 });
 
-test("every tool declares title, readOnlyHint, destructiveHint, openWorldHint", () => {
+test("read/write split is exactly 14 / 4", () => {
+  assert.equal(READ_TOOLS.length, 14, "expected 14 read tools");
+  assert.equal(WRITE_TOOLS.length, 4, "expected 4 write tools");
+});
+
+test("every tool declares a non-empty title", () => {
+  for (const tool of allTools) {
+    assert.equal(typeof tool.title, "string", `${tool.name}: title must be a string`);
+    assert.ok(tool.title.length > 0, `${tool.name}: title must be non-empty`);
+  }
+});
+
+test("every tool has all 4 hint booleans defined (no null/undefined)", () => {
   for (const tool of allTools) {
     const a = tool.annotations;
     assert.ok(a, `${tool.name}: missing annotations`);
-    assert.equal(typeof tool.title, "string", `${tool.name}: title must be a string`);
-    assert.ok(tool.title.length > 0, `${tool.name}: title must be non-empty`);
-    assert.equal(typeof a!.readOnlyHint, "boolean", `${tool.name}: readOnlyHint must be boolean`);
-    assert.equal(typeof a!.destructiveHint, "boolean", `${tool.name}: destructiveHint must be boolean`);
-    assert.equal(typeof a!.openWorldHint, "boolean", `${tool.name}: openWorldHint must be boolean`);
+    for (const hint of ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"] as const) {
+      assert.equal(
+        typeof a[hint],
+        "boolean",
+        `${tool.name}: ${hint} must be an explicit boolean, got ${a[hint] === null ? "null" : typeof a[hint]}`,
+      );
+    }
   }
 });
 
 test("openWorldHint is false for every tool", () => {
   for (const tool of allTools) {
-    assert.equal(tool.annotations!.openWorldHint, false, `${tool.name}: openWorldHint must be false`);
+    assert.equal(tool.annotations.openWorldHint, false, `${tool.name}: openWorldHint must be false`);
   }
 });
 
-test("titles and read/destructive hints match the agreed mapping", () => {
+test("the 14 read tools have readOnlyHint=true", () => {
+  for (const name of READ_TOOLS) {
+    const tool = allTools.find((t) => t.name === name)!;
+    assert.ok(tool, `${name}: not registered`);
+    assert.equal(tool.annotations.readOnlyHint, true, `${name}: read tool must have readOnlyHint=true`);
+  }
+});
+
+test("the 4 write tools have readOnlyHint=false", () => {
+  for (const name of WRITE_TOOLS) {
+    const tool = allTools.find((t) => t.name === name)!;
+    assert.ok(tool, `${name}: not registered`);
+    assert.equal(tool.annotations.readOnlyHint, false, `${name}: write tool must have readOnlyHint=false`);
+  }
+});
+
+test("only proprietio_send_message has destructiveHint=true", () => {
+  for (const tool of allTools) {
+    const expectDestructive = tool.name === "proprietio_send_message";
+    assert.equal(
+      tool.annotations.destructiveHint,
+      expectDestructive,
+      `${tool.name}: destructiveHint should be ${expectDestructive}`,
+    );
+  }
+});
+
+test("every tool has a non-empty behavioural rationale", () => {
+  for (const tool of allTools) {
+    assert.equal(typeof tool.annotationRationale, "string", `${tool.name}: annotationRationale must be a string`);
+    assert.ok(
+      tool.annotationRationale.trim().length >= 20,
+      `${tool.name}: annotationRationale must be a meaningful justification`,
+    );
+  }
+});
+
+test("titles and all four hints match the agreed mapping", () => {
   const seenNames = new Set<string>();
   for (const tool of allTools) {
     const want = EXPECTED[tool.name];
     assert.ok(want, `${tool.name}: not in the expected mapping`);
     seenNames.add(tool.name);
     assert.equal(tool.title, want.title, `${tool.name}: title`);
-    assert.equal(tool.annotations!.readOnlyHint, want.readOnlyHint, `${tool.name}: readOnlyHint`);
-    assert.equal(tool.annotations!.destructiveHint, want.destructiveHint, `${tool.name}: destructiveHint`);
+    assert.equal(tool.annotations.readOnlyHint, want.readOnlyHint, `${tool.name}: readOnlyHint`);
+    assert.equal(tool.annotations.destructiveHint, want.destructiveHint, `${tool.name}: destructiveHint`);
+    assert.equal(tool.annotations.idempotentHint, want.idempotentHint, `${tool.name}: idempotentHint`);
+    assert.equal(tool.annotations.openWorldHint, false, `${tool.name}: openWorldHint`);
   }
   // Every expected tool was present (no silent drops).
   for (const name of Object.keys(EXPECTED)) {

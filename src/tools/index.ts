@@ -28,12 +28,20 @@ import { commsTools } from "./comms.js";
  * is propagated into both the top-level `tool.title` and `annotations.title` by
  * the ListTools handler, so it is intentionally absent here.
  */
+/**
+ * All four behaviour hints are REQUIRED and must be an explicit boolean — never
+ * undefined/null. The OpenAI Apps directory (and the Anthropic Connectors
+ * review) reject any tool whose hints are absent: an omitted hint reads as
+ * "unknown", NOT as a safe default. Making these non-optional turns "a tool
+ * forgot a hint" into a TypeScript compile error instead of a silent directory
+ * rejection — which is exactly the regression that bounced this submission
+ * (`idempotentHint` was missing on the read tools).
+ */
 export interface ToolAnnotations {
-  title?: string;
-  readOnlyHint?: boolean;
-  destructiveHint?: boolean;
-  idempotentHint?: boolean;
-  openWorldHint?: boolean;
+  readOnlyHint: boolean;
+  destructiveHint: boolean;
+  idempotentHint: boolean;
+  openWorldHint: boolean;
 }
 
 export interface ToolDefinition<T extends ZodTypeAny = ZodTypeAny> {
@@ -46,7 +54,17 @@ export interface ToolDefinition<T extends ZodTypeAny = ZodTypeAny> {
   title: string;
   description: string;
   inputSchema: T;
-  annotations?: ToolAnnotations;
+  /** Required: every tool must declare all four behaviour hints explicitly. */
+  annotations: ToolAnnotations;
+  /**
+   * Short, human-readable justification for the hint values above, written to
+   * match the handler's actual behaviour. Surfaced in the docs / PR annotation
+   * table so reviewers (OpenAI, Anthropic, and us) can verify behaviour matches
+   * the hints. Optional on the MCP wire response — the ListTools handler does
+   * not emit it by default — so it is documentation, never part of the frozen
+   * contract.
+   */
+  annotationRationale: string;
   handler: (args: ZodInfer<T>) => unknown | Promise<unknown>;
 }
 
