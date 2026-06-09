@@ -16,7 +16,9 @@ export const propertyTools: ToolDefinition[] = [
     description:
       "Search the Proprietio portfolio by city, state, owner, or unit count. Returns a list of matching properties with summary details.",
     inputSchema: SearchPropertiesInput,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotationRationale:
+      "Read-only search over the property portfolio; never writes, so readOnlyHint=true and destructiveHint=false. Idempotent — the same filters return the same set with no side effects. Closed-world: queries only the configured Proprietio backend, never the open web (openWorldHint=false).",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.searchProperties(args);
       let out = [...properties];
@@ -34,7 +36,9 @@ export const propertyTools: ToolDefinition[] = [
     description:
       "Get the full record for a single property, including its units and active leases.",
     inputSchema: GetPropertyInput,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotationRationale:
+      "Fetches one property (with units and active leases) by ID; a pure read with no mutation, so readOnlyHint=true / destructiveHint=false. Idempotent — repeated lookups of the same ID return the same record. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getProperty(args);
       const property = properties.find(p => p.property_id === args.property_id);
@@ -50,7 +54,9 @@ export const propertyTools: ToolDefinition[] = [
     description:
       "List all units in a property, with occupancy and current rent. Optionally filter to occupied units only.",
     inputSchema: ListUnitsInput,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotationRationale:
+      "Lists units (occupancy, rent) for a property; read-only and non-destructive. Idempotent — same property yields the same unit list with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.listUnits(args);
       let out = units.filter(u => u.property_id === args.property_id);
@@ -71,7 +77,9 @@ export const propertyTools: ToolDefinition[] = [
     description:
       "Get full lease details: tenant, term, rent, deposit, and status.",
     inputSchema: GetLeaseInput,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotationRationale:
+      "Returns lease terms, residents, and unit by lease ID; a pure read, so readOnlyHint=true / destructiveHint=false. Idempotent — repeated reads of the same lease are identical. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getLease(args);
       const lease = leases.find(l => l.lease_id === args.lease_id);
@@ -87,7 +95,9 @@ export const propertyTools: ToolDefinition[] = [
     description:
       "List residents for a property or a specific unit. Returns contact info and current balance due.",
     inputSchema: ListResidentsInput,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotationRationale:
+      "Lists residents (contact info, balance due) for a property or unit; read-only and non-destructive. Idempotent — same scope returns the same residents with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.listResidents(args);
       let out = residents;

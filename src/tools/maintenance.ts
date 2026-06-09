@@ -16,7 +16,9 @@ export const maintenanceTools: ToolDefinition[] = [
     description:
       "Search work orders by property, status, priority, age, or category. Use min_days_open to surface stale tickets.",
     inputSchema: SearchWorkOrdersInput,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotationRationale:
+      "Searches work orders by filter; read-only and non-destructive. Idempotent — the same filters return the same matches with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.searchWorkOrders(args);
       let out = [...workOrders];
@@ -33,7 +35,9 @@ export const maintenanceTools: ToolDefinition[] = [
     title: "Get Work Order Details",
     description: "Get full work order detail: timeline, vendor, photos (URLs), and resolution.",
     inputSchema: GetWorkOrderInput,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotationRationale:
+      "Fetches one work order (timeline, vendor, resolution) by ID; a pure read, so readOnlyHint=true / destructiveHint=false. Idempotent — repeated reads of the same ID are identical. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
@@ -49,6 +53,8 @@ export const maintenanceTools: ToolDefinition[] = [
       "Create a new work order. WRITE action — requires the 'maintenance:write' scope on the OAuth token.",
     inputSchema: CreateWorkOrderInput,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    annotationRationale:
+      "Write: creates a new work order, so readOnlyHint=false. Non-idempotent (idempotentHint=false) — each call inserts a fresh record, so repeats produce duplicates. Not destructive (destructiveHint=false): it only adds a record, never overwrites or deletes existing data. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.createWorkOrder(args);
       const id = nextWorkOrderId();
@@ -83,6 +89,8 @@ export const maintenanceTools: ToolDefinition[] = [
       "Update status, priority, assigned vendor, or append notes to a work order. WRITE action.",
     inputSchema: UpdateWorkOrderInput,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    annotationRationale:
+      "Write: mutates fields on an existing work order, so readOnlyHint=false. Marked non-idempotent (idempotentHint=false) because each call re-stamps updated_at and may append notes, making repeats observable. Not destructive (destructiveHint=false): it edits a record in place without deleting it. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.updateWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
@@ -101,6 +109,8 @@ export const maintenanceTools: ToolDefinition[] = [
       "Close a work order with a resolution note. WRITE action.",
     inputSchema: CloseWorkOrderInput,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotationRationale:
+      "Write: sets a work order to completed with a resolution note, so readOnlyHint=false. Idempotent (idempotentHint=true) — re-closing an already-closed order converges to the same terminal state. Not destructive (destructiveHint=false): no data is removed, only a status/resolution is set. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.closeWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
@@ -117,7 +127,9 @@ export const maintenanceTools: ToolDefinition[] = [
     description:
       "List approved vendors, optionally filtered by trade (plumbing, hvac, electrical, general).",
     inputSchema: ListVendorsInput,
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotationRationale:
+      "Lists approved vendors, optionally by trade; read-only and non-destructive. Idempotent — the same filter returns the same vendors with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
       if (isLiveBackend()) return rentaly.listVendors(args);
       let out = [...vendors];

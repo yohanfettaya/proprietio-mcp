@@ -45,10 +45,22 @@ export function createServer(): Server {
       }) as Record<string, unknown>,
       // Behaviour hints — read by the Anthropic Connectors directory / ChatGPT
       // Apps SDK / Claude for safety gating. Additive only; never affects the
-      // frozen tool name or input schema. `title` is folded in here too so
-      // clients that read annotations.title (rather than the top-level field)
-      // still get the friendly label.
-      annotations: { title: t.title, ...(t.annotations ?? {}) },
+      // frozen tool name or input schema. All four hints are emitted EXPLICITLY
+      // as booleans on every tool — never omitted/undefined/null — because the
+      // OpenAI Apps directory (and Anthropic review) reject a tool whose hints
+      // are absent (an omitted hint reads as "unknown", not a safe default).
+      // That omission — `idempotentHint` missing on the read tools — is exactly
+      // what bounced the submission. Listing the keys by hand here (rather than
+      // spreading) keeps the wire shape explicit even if the type ever loosens.
+      // `title` is folded in too so clients that read annotations.title (rather
+      // than the top-level field) still get the friendly label.
+      annotations: {
+        title: t.title,
+        readOnlyHint: t.annotations.readOnlyHint,
+        destructiveHint: t.annotations.destructiveHint,
+        idempotentHint: t.annotations.idempotentHint,
+        openWorldHint: t.annotations.openWorldHint,
+      },
     })),
   }));
 
