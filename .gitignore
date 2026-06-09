@@ -4,3 +4,6 @@ dist/
 .env
 .env.*
 .DS_Store
+
+# OpenAI Apps submission artifact (generated, not source)
+chatgpt-app-submission.json
