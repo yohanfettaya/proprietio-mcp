@@ -53,18 +53,20 @@ const EXPECTED: Record<
   proprietio_close_work_order: { title: "Close Work Order", readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   // Write, externally-impacting (reaches a real human) (1)
   proprietio_send_message: { title: "Send Tenant or Vendor Message", readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  // Debug (1)
+  proprietio_whoami: { title: "Who Am I (Debug)", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
 };
 
-// The 14 read tools and 4 write tools, per the agreed contract.
+// The 15 read tools and 4 write tools (debug whoami counts as read).
 const READ_TOOLS = Object.entries(EXPECTED).filter(([, v]) => v.readOnlyHint).map(([k]) => k);
 const WRITE_TOOLS = Object.entries(EXPECTED).filter(([, v]) => !v.readOnlyHint).map(([k]) => k);
 
-test("all 18 tools are registered", () => {
-  assert.equal(allTools.length, 18);
+test("all 19 tools are registered (18 public + 1 debug)", () => {
+  assert.equal(allTools.length, 19);
 });
 
-test("read/write split is exactly 14 / 4", () => {
-  assert.equal(READ_TOOLS.length, 14, "expected 14 read tools");
+test("read/write split is exactly 15 / 4 (14 public reads + 1 debug + 4 writes)", () => {
+  assert.equal(READ_TOOLS.length, 15, "expected 15 read tools (14 public + whoami debug)");
   assert.equal(WRITE_TOOLS.length, 4, "expected 4 write tools");
 });
 
@@ -100,7 +102,7 @@ test("openWorldHint is true only for proprietio_send_message (external email dis
   }
 });
 
-test("the 14 read tools have readOnlyHint=true", () => {
+test("the 15 read tools have readOnlyHint=true", () => {
   for (const name of READ_TOOLS) {
     const tool = allTools.find((t) => t.name === name)!;
     assert.ok(tool, `${name}: not registered`);

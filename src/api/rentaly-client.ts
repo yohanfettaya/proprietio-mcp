@@ -441,6 +441,12 @@ export const rentaly = {
     return { work_order_id: wo.work_order_id, status: wo.status, closed_at: wo.updated_at };
   },
 
+  /* ---------- Debug ---------- */
+
+  async whoami() {
+    return call("GET", "/v1/whoami");
+  },
+
   /* ---------- Comms ---------- */
 
   async sendMessage(args: z.infer<typeof T.SendMessageInput>) {

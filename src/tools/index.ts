@@ -9,6 +9,7 @@ import { propertyTools } from "./properties.js";
 import { accountingTools } from "./accounting.js";
 import { maintenanceTools } from "./maintenance.js";
 import { commsTools } from "./comms.js";
+import { debugTools } from "./debug.js";
 
 /**
  * MCP tool annotations (per the MCP spec / Anthropic Connectors directory
@@ -73,10 +74,11 @@ export const allTools: ToolDefinition[] = [
   ...accountingTools,
   ...maintenanceTools,
   ...commsTools,
+  ...debugTools,
 ];
 
-if (allTools.length !== 18) {
-  // Self-check at module load: the spec promises 18 tools.
+if (allTools.length !== 19) {
+  // Self-check at module load: the spec promises 18 public tools + 1 debug tool.
   // Throwing here makes mismatches obvious in CI.
-  throw new Error(`Expected 18 tools, registered ${allTools.length}`);
+  throw new Error(`Expected 19 tools, registered ${allTools.length}`);
 }
