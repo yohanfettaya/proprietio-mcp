@@ -25,8 +25,9 @@ machine-readable tool metadata. All four are live:
 | Tool annotations (`readOnlyHint` etc.) | live | `tools/list` returns annotations on all 18 |
 | `structuredContent` on results | live | `tools/call` returns it alongside the text block |
 
-ChatGPT's safety review keys off the annotations: 14 tools are `readOnlyHint: true`; the 4
-maintenance writes and `send_message` are not. Only `proprietio_send_message` is
+ChatGPT's safety review keys off the annotations: 14 tools are `readOnlyHint: true`; the 3
+maintenance writes plus `send_message` are not. `update_work_order`, `close_work_order`, and
+`send_message` are conservatively marked destructive; only `proprietio_send_message` is
 `openWorldHint: true` (it leaves the system — sends to a resident/vendor).
 
 ---
@@ -98,7 +99,8 @@ Request **read scopes by default**; the 2 write scopes are opt-in at consent so 
 | `maintenance:write` | create / update / close work orders | opt-in |
 | `communications:write` | send message to resident/vendor | opt-in |
 
-If ChatGPT requests only the four read scopes, the 4 write tools + `send_message` return a
+If ChatGPT requests only the four read scopes, the 3 maintenance write tools plus
+`send_message` return a
 403 `insufficient_scope`, and the connector enriches the error with the exact scope to grant
 ("re-authorize the connector to grant maintenance:write"). This is the intended, reviewable
 behavior — not a bug.
@@ -140,13 +142,16 @@ ChatGPT is naming-agnostic and reuses them verbatim. **14 read, 4 write.**
 1. In ChatGPT → Settings → Apps/Connectors → add the Proprietio app.
 2. OAuth prompt → log in with the reviewer demo credentials (provided privately, not in
    this file). Consent screen shows the requested scopes; click Approve.
-3. Run these prompts (read-only, deterministic against the seeded demo portfolio):
+3. Run these prompts (read-only, deterministic against the seeded demo portfolio). Use
+   the exact prompts and expected outcomes below in the OpenAI submission form:
 
-   1. *"Search my Proprietio properties."* → `proprietio_search_properties`
-   2. *"What's the delinquency aging across my portfolio this month, by property?"* → `proprietio_get_delinquency`
-   3. *"What was the NOI for [demo property] last month?"* → `proprietio_get_noi`
-   4. *"Show open work orders older than 7 days."* → `proprietio_search_work_orders`
-   5. *"List residents at [demo property] with their balance due."* → `proprietio_list_residents`
+   | Prompt | Expected tool call | Expected outcome |
+   |---|---|---|
+   | *"Search my Proprietio properties in Texas."* | `proprietio_search_properties` with `state:"TX"` | 3 properties: The Madison (`prop_001`), Riverbend Lofts (`prop_002`), Hill Country Commons (`prop_003`). |
+   | *"Show delinquency aging for portfolio port_tx as of 2026-05-31, grouped by property."* | `proprietio_get_delinquency` with `scope_id:"port_tx"`, `as_of_date:"2026-05-31"`, `group_by:"property"` | Total delinquency is `$12,800`: The Madison `$7,250`, Riverbend Lofts `$3,850`, Hill Country Commons `$1,700`. |
+   | *"What was the NOI for The Madison, property prop_001, from 2026-05-01 to 2026-05-31?"* | `proprietio_get_noi` with `scope_id:"prop_001"`, `period_start:"2026-05-01"`, `period_end:"2026-05-31"` | One-month result: total revenue `$6,864`, operating expenses `$2,883`, NOI `$3,981`, NOI margin `58%`. |
+   | *"Show open work orders older than 7 days."* | `proprietio_search_work_orders` with `status:"open"`, `min_days_open:7` | 2 work orders: `wo_002` (The Madison/unit 104 turnover prep, 14 days) and `wo_004` (Riverbend Lofts lobby fixtures, 47 days). |
+   | *"List residents at The Madison, property prop_001, with their balance due."* | `proprietio_list_residents` with `property_id:"prop_001"` | 4 residents: Sarah Chen `$0`, Marcus Johnson `$2,350`, Elena Johnson `$0`, David Park `$4,900`. The answer should summarize names and balances only unless contact information is explicitly requested. |
 
 4. Write-path (only if write scopes were granted):
    - *"Open a high-priority work order for [demo unit] — kitchen sink leaking."* → `proprietio_create_work_order`
@@ -184,6 +189,14 @@ beyond the seeded demo org; first call after idle may take ~30s (free-tier spin-
 - [ ] 3–5 screenshots: connect/consent screen + 2–3 tool results in ChatGPT.
 - [ ] Cold-start mitigated (paid tier or warm-ping) OR noted in submission.
 - [ ] Confirm `MCP_OAUTH_ENABLED=true` on both Render services (it is, as of 2026-05-31).
+- [ ] With an authenticated reviewer/demo token, call `tools/list` on the live MCP endpoint
+      and confirm the emitted annotations match `test/annotations.contract.test.ts`:
+      all read tools and `proprietio_create_work_order` have `destructiveHint:false`;
+      `proprietio_update_work_order`, `proprietio_close_work_order`, and
+      `proprietio_send_message` have `destructiveHint:true`; only
+      `proprietio_send_message` has `openWorldHint:true`.
+- [ ] Run `npm test`; this includes `test/reviewer-prompts.contract.test.ts`, which
+      asserts the exact expected outcomes listed in §4.
 - [ ] Run §4 prompts once in ChatGPT yourself before submitting.
 - [ ] Reviewer credentials shared with OpenAI through their secure channel — **never** in
       this repo or any committed file.

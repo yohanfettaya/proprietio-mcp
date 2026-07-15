@@ -63,10 +63,10 @@ async function main() {
   });
   console.log(search.result?.content?.[0]?.text);
 
-  divider("4. Delinquency by property (TX portfolio)");
+  divider("4. Delinquency by property (TX portfolio, as of 2026-05-31)");
   const delinq = await rpc("tools/call", {
     name: "proprietio_get_delinquency",
-    arguments: { scope_id: "port_tx", group_by: "property" },
+    arguments: { scope_id: "port_tx", as_of_date: "2026-05-31", group_by: "property" },
   });
   console.log(delinq.result?.content?.[0]?.text);
 

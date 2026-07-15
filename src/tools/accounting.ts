@@ -25,6 +25,13 @@ function inScope(scopeId: string, propertyId: string): boolean {
   return scopeId === propertyId;
 }
 
+function inclusiveMonthCount(periodStart: string, periodEnd: string): number {
+  const [startYear, startMonth] = periodStart.split("-").map(Number);
+  const [endYear, endMonth] = periodEnd.split("-").map(Number);
+  const diff = (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+  return Math.max(1, diff);
+}
+
 export const accountingTools: ToolDefinition[] = [
   {
     name: "proprietio_get_rent_roll",
@@ -148,12 +155,7 @@ export const accountingTools: ToolDefinition[] = [
     handler: (args) => {
       if (isLiveBackend()) return rentaly.getIncomeStatement(args);
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
-      // months in period (inclusive month buckets)
-      const start = new Date(args.period_start);
-      const end = new Date(args.period_end);
-      const months = Math.max(1, Math.round(
-        (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1
-      ));
+      const months = inclusiveMonthCount(args.period_start, args.period_end);
 
       const rentalIncome = inScopeProps.reduce((sum, p) => {
         const propUnits = units.filter(u => u.property_id === p.property_id && u.occupied);
@@ -283,11 +285,7 @@ export const accountingTools: ToolDefinition[] = [
       if (isLiveBackend()) return rentaly.getNoi(args);
       // Reuse income statement logic for consistency
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
-      const start = new Date(args.period_start);
-      const end = new Date(args.period_end);
-      const months = Math.max(1, Math.round(
-        (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1
-      ));
+      const months = inclusiveMonthCount(args.period_start, args.period_end);
       const rentalIncome = inScopeProps.reduce((sum, p) => {
         const propUnits = units.filter(u => u.property_id === p.property_id && u.occupied);
         return sum + propUnits.reduce((s, u) => s + u.current_rent, 0) * months;

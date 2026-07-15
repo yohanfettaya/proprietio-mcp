@@ -17,10 +17,10 @@ export const TOOL_SCOPES: Record<string, string> = {
   proprietio_search_properties: "properties:read",
   proprietio_get_property: "properties:read",
   proprietio_list_units: "properties:read",
-  proprietio_get_rent_roll: "properties:read",
   // Residents (tenants:read)
   proprietio_list_residents: "tenants:read",
   // Accounting (accounting:read)
+  proprietio_get_rent_roll: "accounting:read",
   proprietio_get_balance_sheet: "accounting:read",
   proprietio_get_income_statement: "accounting:read",
   proprietio_get_general_ledger: "accounting:read",

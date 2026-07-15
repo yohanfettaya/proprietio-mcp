@@ -22,7 +22,9 @@ import { allTools } from "../src/tools/index.js";
 // Every other tool only touches the configured Proprietio backend.
 // idempotentHint: every read is idempotent; among writes, only close_work_order
 // converges to a terminal state (re-closing is a no-op), while create/update/
-// send each have a fresh effect per call.
+// send each have a fresh effect per call. destructiveHint is conservative:
+// updating or closing a work order changes an existing operational record, and
+// send_message reaches a real recipient.
 const EXPECTED: Record<
   string,
   {
@@ -47,10 +49,11 @@ const EXPECTED: Record<
   proprietio_search_work_orders: { title: "Search Work Orders", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
   proprietio_get_work_order: { title: "Get Work Order Details", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
   proprietio_list_vendors: { title: "List Approved Vendors", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
-  // Write, non-destructive (3)
+  // Write, additive (1)
   proprietio_create_work_order: { title: "Create Work Order", readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-  proprietio_update_work_order: { title: "Update Work Order", readOnlyHint: false, destructiveHint: false, idempotentHint: false },
-  proprietio_close_work_order: { title: "Close Work Order", readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  // Write, changes existing operational state (2)
+  proprietio_update_work_order: { title: "Update Work Order", readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+  proprietio_close_work_order: { title: "Close Work Order", readOnlyHint: false, destructiveHint: true, idempotentHint: true },
   // Write, externally-impacting (reaches a real human) (1)
   proprietio_send_message: { title: "Send Tenant or Vendor Message", readOnlyHint: false, destructiveHint: true, idempotentHint: false },
   // Debug (1)
@@ -118,9 +121,13 @@ test("the 4 write tools have readOnlyHint=false", () => {
   }
 });
 
-test("only proprietio_send_message has destructiveHint=true", () => {
+test("only state-changing existing-record writes and send_message have destructiveHint=true", () => {
   for (const tool of allTools) {
-    const expectDestructive = tool.name === "proprietio_send_message";
+    const expectDestructive = [
+      "proprietio_update_work_order",
+      "proprietio_close_work_order",
+      "proprietio_send_message",
+    ].includes(tool.name);
     assert.equal(
       tool.annotations.destructiveHint,
       expectDestructive,

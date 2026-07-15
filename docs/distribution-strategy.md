@@ -100,8 +100,9 @@ Transport (stateless Streamable HTTP), the 18 tools + Zod input schemas, the
 
 ### B. Apps-SDK / Copilot compatibility — DONE (this PR, additive, contract-safe)
 - **Tool annotations** on all 18: `readOnlyHint` / `destructiveHint` / `idempotentHint` /
-  `openWorldHint` + a human `title`. 14 reads, 4 writes; only `send_message` is
-  open-world. ChatGPT's safety review and Copilot both key off these.
+  `openWorldHint` + a human `title`. 14 reads, 4 writes; `update_work_order`,
+  `close_work_order`, and `send_message` are conservatively marked destructive; only
+  `send_message` is open-world. ChatGPT's safety review and Copilot both key off these.
 - **`structuredContent`** added to every `tools/call` result alongside the text block, so
   clients parse fields deterministically.
 - Verified over the wire: `tools/list` returns annotations on all 18; `tools/call`
