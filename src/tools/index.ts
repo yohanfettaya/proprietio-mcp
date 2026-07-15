@@ -22,8 +22,9 @@ import { debugTools } from "./debug.js";
  *                      meaningful when readOnlyHint is false.
  *   - idempotentHint:  repeating the same call has no additional effect.
  *   - openWorldHint:   the tool reaches an open/unbounded external world (e.g.
- *                      browses arbitrary web). FALSE for every Proprietio tool —
- *                      we only ever touch the one configured Proprietio backend.
+ *                      dispatches an external email). FALSE for every Proprietio
+ *                      tool EXCEPT proprietio_send_message, which delivers a
+ *                      message to a recipient's own inbox outside our backend.
  *
  * `title` lives on the ToolDefinition (below) as the single source of truth and
  * is propagated into both the top-level `tool.title` and `annotations.title` by

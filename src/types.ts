@@ -7,7 +7,15 @@ import { z } from "zod";
 // ---------- Common ----------
 export const IsoDate = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD");
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD")
+  .describe("Calendar date in ISO 8601 YYYY-MM-DD format, e.g. '2026-06-30'.");
+
+// Shared description for the property-or-portfolio scope selector. Made explicit
+// because the ChatGPT Apps review flagged bare `scope_id` fields as ambiguous
+// (property vs portfolio identifier).
+const SCOPE_ID_DESC =
+  "Scope to report on: a property ID (e.g. 'prop_001') for a single property, " +
+  "or 'portfolio' for the entire portfolio.";
 
 export const Money = z.number().nonnegative();
 export const Pct = z.number().min(0).max(100);
@@ -121,29 +129,29 @@ export const ListResidentsInput = z.object({
 
 // Accounting
 export const GetRentRollInput = z.object({
-  scope_id: z.string().describe("Property or portfolio identifier"),
+  scope_id: z.string().describe(SCOPE_ID_DESC),
   as_of_date: IsoDate.optional(),
 });
 
 export const GetDelinquencyInput = z.object({
-  scope_id: z.string(),
+  scope_id: z.string().describe(SCOPE_ID_DESC),
   as_of_date: IsoDate.optional(),
   group_by: z.enum(["property", "unit", "resident"]).optional().default("property"),
 });
 
 export const GetIncomeStatementInput = z.object({
-  scope_id: z.string(),
+  scope_id: z.string().describe(SCOPE_ID_DESC),
   period_start: IsoDate,
   period_end: IsoDate,
 });
 
 export const GetBalanceSheetInput = z.object({
-  scope_id: z.string(),
+  scope_id: z.string().describe(SCOPE_ID_DESC),
   as_of_date: IsoDate.optional(),
 });
 
 export const GetGeneralLedgerInput = z.object({
-  scope_id: z.string(),
+  scope_id: z.string().describe(SCOPE_ID_DESC),
   account: z.string().optional().describe("GL account filter, e.g. '4000-Rental Income'"),
   period_start: IsoDate,
   period_end: IsoDate,
@@ -151,7 +159,7 @@ export const GetGeneralLedgerInput = z.object({
 });
 
 export const GetNoiInput = z.object({
-  scope_id: z.string(),
+  scope_id: z.string().describe(SCOPE_ID_DESC),
   period_start: IsoDate,
   period_end: IsoDate,
 });
@@ -198,8 +206,10 @@ export const ListVendorsInput = z.object({
 
 // Comms
 export const SendMessageInput = z.object({
-  to_resident_id: z.string().optional(),
-  to_vendor_id: z.string().optional(),
+  to_resident_id: z.string().optional()
+    .describe("ID of the resident recipient. Provide exactly one of to_resident_id or to_vendor_id."),
+  to_vendor_id: z.string().optional()
+    .describe("ID of the vendor recipient. Provide exactly one of to_resident_id or to_vendor_id."),
   subject: z.string().min(1),
   body: z.string().min(1),
 }).refine(
