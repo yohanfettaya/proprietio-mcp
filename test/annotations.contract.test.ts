@@ -13,7 +13,22 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { mcpInputSchemaForTool } from "../src/server.js";
 import { allTools } from "../src/tools/index.js";
+
+type JsonObject = Record<string, unknown>;
+
+function toolSchema(name: string): JsonObject {
+  const tool = allTools.find((t) => t.name === name);
+  assert.ok(tool, `${name}: tool must be registered`);
+  return mcpInputSchemaForTool(tool);
+}
+
+function schemaProperties(schema: JsonObject): Record<string, JsonObject> {
+  const properties = schema.properties as Record<string, JsonObject> | undefined;
+  assert.ok(properties, "schema must expose object properties");
+  return properties;
+}
 
 // The agreed mapping. openWorldHint is false for every tool EXCEPT
 // proprietio_send_message: that tool dispatches an external email to the
@@ -170,4 +185,63 @@ test("titles are unique and human-friendly (no raw tool names leak)", () => {
   for (const tool of allTools) {
     assert.ok(!tool.title.startsWith("proprietio_"), `${tool.name}: title looks like a raw tool name`);
   }
+});
+
+test("review-sensitive schemas express exactly-one target arguments", () => {
+  assert.deepEqual(toolSchema("proprietio_list_residents").oneOf, [
+    { required: ["property_id"], not: { required: ["unit_id"] } },
+    { required: ["unit_id"], not: { required: ["property_id"] } },
+  ]);
+  assert.deepEqual(toolSchema("proprietio_send_message").oneOf, [
+    { required: ["to_resident_id"], not: { required: ["to_vendor_id"] } },
+    { required: ["to_vendor_id"], not: { required: ["to_resident_id"] } },
+  ]);
+});
+
+test("review-sensitive schemas describe scope IDs, dates, and GL account filters", () => {
+  for (const name of [
+    "proprietio_get_rent_roll",
+    "proprietio_get_delinquency",
+    "proprietio_get_income_statement",
+    "proprietio_get_balance_sheet",
+    "proprietio_get_general_ledger",
+    "proprietio_get_noi",
+  ]) {
+    const properties = schemaProperties(toolSchema(name));
+    assert.match(String(properties.scope_id.description), /prop_001/);
+    assert.match(String(properties.scope_id.description), /port_tx/);
+
+    for (const dateField of ["as_of_date", "period_start", "period_end"]) {
+      if (properties[dateField]) {
+        assert.equal(properties[dateField].format, "date", `${name}: ${dateField} format`);
+        assert.match(String(properties[dateField].description), /YYYY-MM-DD/, `${name}: ${dateField} description`);
+      }
+    }
+  }
+
+  const glProperties = schemaProperties(toolSchema("proprietio_get_general_ledger"));
+  assert.match(String(glProperties.account.description), /4000-Rental Income/);
+  assert.match(String(glProperties.account.description), /omit to include all accounts/);
+});
+
+test("runtime validation rejects ambiguous exactly-one target arguments", () => {
+  const residents = allTools.find((t) => t.name === "proprietio_list_residents")!;
+  assert.equal(residents.inputSchema.safeParse({}).success, false);
+  assert.equal(residents.inputSchema.safeParse({ property_id: "prop_001", unit_id: "unit_001_101" }).success, false);
+  assert.equal(residents.inputSchema.safeParse({ property_id: "prop_001" }).success, true);
+  assert.equal(residents.inputSchema.safeParse({ unit_id: "unit_001_101" }).success, true);
+
+  const sendMessage = allTools.find((t) => t.name === "proprietio_send_message")!;
+  assert.equal(sendMessage.inputSchema.safeParse({ subject: "Hi", body: "Hello" }).success, false);
+  assert.equal(
+    sendMessage.inputSchema.safeParse({
+      to_resident_id: "res_001",
+      to_vendor_id: "vendor_001",
+      subject: "Hi",
+      body: "Hello",
+    }).success,
+    false,
+  );
+  assert.equal(sendMessage.inputSchema.safeParse({ to_resident_id: "res_001", subject: "Hi", body: "Hello" }).success, true);
+  assert.equal(sendMessage.inputSchema.safeParse({ to_vendor_id: "vendor_001", subject: "Hi", body: "Hello" }).success, true);
 });

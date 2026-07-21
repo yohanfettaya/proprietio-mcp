@@ -11,7 +11,7 @@ export const commsTools: ToolDefinition[] = [
     name: "proprietio_send_message",
     title: "Send Tenant or Vendor Message",
     description:
-      "Send a message to a resident or vendor through Proprietio's messaging system. WRITE action — requires 'communications:write' scope.",
+      "Send a message through Proprietio's messaging system to exactly one recipient: either one resident or one vendor. WRITE action; requires the communications:write scope.",
     inputSchema: SendMessageInput,
     // destructiveHint: true — the message reaches a real human and cannot be
     // un-sent. openWorldHint: true — delivery dispatches an external email to the

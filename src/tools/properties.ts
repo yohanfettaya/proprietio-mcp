@@ -93,7 +93,7 @@ export const propertyTools: ToolDefinition[] = [
     name: "proprietio_list_residents",
     title: "List Residents",
     description:
-      "List residents for a property or a specific unit. Returns contact info and current balance due.",
+      "List residents for exactly one target: either a property or a unit. Returns contact info and current balance due.",
     inputSchema: ListResidentsInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     annotationRationale:

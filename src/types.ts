@@ -9,6 +9,15 @@ export const IsoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD");
 
+const ScopeId = z
+  .string()
+  .describe(
+    "Proprietio scope identifier. Use a property ID such as 'prop_001' for a single property, or a portfolio ID such as 'port_tx' for a portfolio.",
+  );
+const AsOfDate = IsoDate.describe("As-of date in YYYY-MM-DD format, for example 2026-05-31.");
+const PeriodStartDate = IsoDate.describe("Inclusive period start date in YYYY-MM-DD format, for example 2026-05-01.");
+const PeriodEndDate = IsoDate.describe("Inclusive period end date in YYYY-MM-DD format, for example 2026-05-31.");
+
 export const Money = z.number().nonnegative();
 export const Pct = z.number().min(0).max(100);
 
@@ -112,48 +121,68 @@ export const GetLeaseInput = z.object({
 });
 
 export const ListResidentsInput = z.object({
-  property_id: z.string().optional(),
-  unit_id: z.string().optional(),
+  property_id: z
+    .string()
+    .optional()
+    .describe("Property ID such as 'prop_001'. Provide this when listing all residents for a property. Do not also provide unit_id."),
+  unit_id: z
+    .string()
+    .optional()
+    .describe("Unit ID such as 'unit_001_104'. Provide this when listing residents for one unit. Do not also provide property_id."),
 }).refine(
-  (v) => v.property_id || v.unit_id,
-  "Provide property_id or unit_id",
+  (v) => Boolean(v.property_id) !== Boolean(v.unit_id),
+  "Provide exactly one of property_id or unit_id",
 );
 
 // Accounting
 export const GetRentRollInput = z.object({
-  scope_id: z.string().describe("Property or portfolio identifier"),
-  as_of_date: IsoDate.optional(),
+  scope_id: ScopeId,
+  as_of_date: AsOfDate.optional(),
 });
 
 export const GetDelinquencyInput = z.object({
-  scope_id: z.string(),
-  as_of_date: IsoDate.optional(),
-  group_by: z.enum(["property", "unit", "resident"]).optional().default("property"),
+  scope_id: ScopeId,
+  as_of_date: AsOfDate.optional(),
+  group_by: z
+    .enum(["property", "unit", "resident"])
+    .optional()
+    .default("property")
+    .describe("Grouping level for the report. Use 'property', 'unit', or 'resident'. Defaults to 'property'."),
 });
 
 export const GetIncomeStatementInput = z.object({
-  scope_id: z.string(),
-  period_start: IsoDate,
-  period_end: IsoDate,
+  scope_id: ScopeId,
+  period_start: PeriodStartDate,
+  period_end: PeriodEndDate,
 });
 
 export const GetBalanceSheetInput = z.object({
-  scope_id: z.string(),
-  as_of_date: IsoDate.optional(),
+  scope_id: ScopeId,
+  as_of_date: AsOfDate.optional(),
 });
 
 export const GetGeneralLedgerInput = z.object({
-  scope_id: z.string(),
-  account: z.string().optional().describe("GL account filter, e.g. '4000-Rental Income'"),
-  period_start: IsoDate,
-  period_end: IsoDate,
-  limit: z.number().int().positive().max(500).optional().default(100),
+  scope_id: ScopeId,
+  account: z
+    .string()
+    .optional()
+    .describe("Optional GL account filter. Use an exact account code or account name such as '4000-Rental Income'; omit to include all accounts."),
+  period_start: PeriodStartDate,
+  period_end: PeriodEndDate,
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .max(500)
+    .optional()
+    .default(100)
+    .describe("Maximum number of ledger entries to return, from 1 to 500. Defaults to 100."),
 });
 
 export const GetNoiInput = z.object({
-  scope_id: z.string(),
-  period_start: IsoDate,
-  period_end: IsoDate,
+  scope_id: ScopeId,
+  period_start: PeriodStartDate,
+  period_end: PeriodEndDate,
 });
 
 // Maintenance
@@ -198,11 +227,17 @@ export const ListVendorsInput = z.object({
 
 // Comms
 export const SendMessageInput = z.object({
-  to_resident_id: z.string().optional(),
-  to_vendor_id: z.string().optional(),
-  subject: z.string().min(1),
-  body: z.string().min(1),
+  to_resident_id: z
+    .string()
+    .optional()
+    .describe("Resident ID to message, for example 'res_001'. Provide this for resident messages. Do not also provide to_vendor_id."),
+  to_vendor_id: z
+    .string()
+    .optional()
+    .describe("Vendor ID to message, for example 'vendor_001'. Provide this for vendor messages. Do not also provide to_resident_id."),
+  subject: z.string().min(1).describe("Message subject. Required."),
+  body: z.string().min(1).describe("Message body. Required."),
 }).refine(
-  (v) => v.to_resident_id || v.to_vendor_id,
-  "Provide to_resident_id or to_vendor_id",
+  (v) => Boolean(v.to_resident_id) !== Boolean(v.to_vendor_id),
+  "Provide exactly one of to_resident_id or to_vendor_id",
 );

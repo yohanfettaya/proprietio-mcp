@@ -37,7 +37,7 @@ export const accountingTools: ToolDefinition[] = [
     name: "proprietio_get_rent_roll",
     title: "Get Rent Roll Snapshot",
     description:
-      "Returns a rent roll snapshot: occupied units, contracted rent, market rent, and loss-to-lease for a property or portfolio.",
+      "Returns a rent roll snapshot for one property or one portfolio: occupied units, contracted rent, market rent, and loss-to-lease.",
     inputSchema: GetRentRollInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     annotationRationale:
@@ -75,7 +75,7 @@ export const accountingTools: ToolDefinition[] = [
     name: "proprietio_get_delinquency",
     title: "Get Delinquency Aging Report",
     description:
-      "Delinquency aging report (0-30, 31-60, 61-90, 90+) for a property or portfolio. Groupable by property, unit, or resident.",
+      "Returns a delinquency aging report for one property or one portfolio. Buckets are 0-30, 31-60, 61-90, and 90+ days, grouped by property, unit, or resident.",
     inputSchema: GetDelinquencyInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     annotationRationale:
@@ -147,7 +147,7 @@ export const accountingTools: ToolDefinition[] = [
     name: "proprietio_get_income_statement",
     title: "Get Income Statement",
     description:
-      "Profit & loss for a property or portfolio over a date range. Returns revenue, operating expenses, NOI, and margins.",
+      "Returns a profit and loss statement for one property or one portfolio over an inclusive date range. Includes revenue, operating expenses, NOI, and margins.",
     inputSchema: GetIncomeStatementInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     annotationRationale:
@@ -194,7 +194,7 @@ export const accountingTools: ToolDefinition[] = [
     name: "proprietio_get_balance_sheet",
     title: "Get Balance Sheet",
     description:
-      "Balance sheet as of a date: total assets (real estate + cash), liabilities (mortgages), and equity.",
+      "Returns a balance sheet for one property or one portfolio as of a specific date: assets, liabilities, and equity.",
     inputSchema: GetBalanceSheetInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     annotationRationale:
@@ -223,7 +223,7 @@ export const accountingTools: ToolDefinition[] = [
     name: "proprietio_get_general_ledger",
     title: "Get General Ledger Entries",
     description:
-      "Returns GL entries for a scope, filtered by account and date range. Useful for transaction-level audits.",
+      "Returns general ledger entries for one property or one portfolio over an inclusive date range, optionally filtered by GL account code or account name.",
     inputSchema: GetGeneralLedgerInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     annotationRationale:
@@ -276,7 +276,7 @@ export const accountingTools: ToolDefinition[] = [
     name: "proprietio_get_noi",
     title: "Get Net Operating Income",
     description:
-      "Net Operating Income for a property or portfolio over a date range. NOI = total revenue - operating expenses (excluding debt service & capex).",
+      "Returns net operating income for one property or one portfolio over an inclusive date range. NOI is total revenue minus operating expenses, excluding debt service and capex.",
     inputSchema: GetNoiInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     annotationRationale:

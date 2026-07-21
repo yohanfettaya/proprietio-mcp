@@ -10,11 +10,68 @@ import {
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { allTools } from "./tools/index.js";
+import { allTools, type ToolDefinition } from "./tools/index.js";
 import { scopeForTool } from "./scopes.js";
 
 const SERVER_NAME = process.env.MCP_SERVER_NAME ?? "proprietio-mcp";
 const SERVER_VERSION = process.env.MCP_SERVER_VERSION ?? "0.1.0";
+
+type JsonObject = Record<string, unknown>;
+
+function jsonObject(value: unknown): JsonObject | undefined {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as JsonObject;
+  }
+  return undefined;
+}
+
+function addExactlyOne(schema: JsonObject, first: string, second: string) {
+  schema.oneOf = [
+    {
+      required: [first],
+      not: { required: [second] },
+    },
+    {
+      required: [second],
+      not: { required: [first] },
+    },
+  ];
+}
+
+function addDateFormats(schema: JsonObject) {
+  const properties = jsonObject(schema.properties);
+  if (!properties) return;
+
+  for (const propertyName of ["as_of_date", "period_start", "period_end"]) {
+    const property = jsonObject(properties[propertyName]);
+    if (property) property.format = "date";
+  }
+}
+
+export function mcpInputSchemaForTool(t: ToolDefinition): JsonObject {
+  // Emit standards-compliant JSON Schema (draft-07), NOT OpenAPI 3.0.
+  // The `openApi3` target serialises numeric bounds the OpenAPI/draft-04 way
+  // — e.g. `exclusiveMinimum: true` (a boolean) alongside `minimum`. That is
+  // INVALID under JSON Schema draft-07/2020-12, which MCP clients validate
+  // against. Claude tolerated it; ChatGPT's Apps SDK rejects the whole tool
+  // ("Invalid MCP tool schema for tool 'proprietio_get_general_ledger'").
+  // The default target emits `exclusiveMinimum: 0` (numeric) — valid. This
+  // changes only how the SAME Zod schema is serialised; no tool name or
+  // input field is touched (frozen-contract safe).
+  const schema = zodToJsonSchema(t.inputSchema, {
+    $refStrategy: "none",
+  }) as JsonObject;
+
+  addDateFormats(schema);
+
+  if (t.name === "proprietio_list_residents") {
+    addExactlyOne(schema, "property_id", "unit_id");
+  } else if (t.name === "proprietio_send_message") {
+    addExactlyOne(schema, "to_resident_id", "to_vendor_id");
+  }
+
+  return schema;
+}
 
 export function createServer(): Server {
   const server = new Server(
@@ -31,18 +88,7 @@ export function createServer(): Server {
       // compatibility — the frozen contract is `name`, never `title`.
       title: t.title,
       description: t.description,
-      // Emit standards-compliant JSON Schema (draft-07), NOT OpenAPI 3.0.
-      // The `openApi3` target serialises numeric bounds the OpenAPI/draft-04 way
-      // — e.g. `exclusiveMinimum: true` (a boolean) alongside `minimum`. That is
-      // INVALID under JSON Schema draft-07/2020-12, which MCP clients validate
-      // against. Claude tolerated it; ChatGPT's Apps SDK rejects the whole tool
-      // ("Invalid MCP tool schema for tool 'proprietio_get_general_ledger'").
-      // The default target emits `exclusiveMinimum: 0` (numeric) — valid. This
-      // changes only how the SAME Zod schema is serialised; no tool name or
-      // input field is touched (frozen-contract safe).
-      inputSchema: zodToJsonSchema(t.inputSchema, {
-        $refStrategy: "none",
-      }) as Record<string, unknown>,
+      inputSchema: mcpInputSchemaForTool(t),
       // Behaviour hints — read by the Anthropic Connectors directory / ChatGPT
       // Apps SDK / Claude for safety gating. Additive only; never affects the
       // frozen tool name or input schema. All four hints are emitted EXPLICITLY
