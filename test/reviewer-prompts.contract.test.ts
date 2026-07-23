@@ -15,6 +15,11 @@ async function callTool(name: string, args: Record<string, unknown>) {
   return tool.handler(parsed) as Promise<Record<string, unknown>> | Record<string, unknown>;
 }
 
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
 test("review prompt: search Texas properties returns the seeded portfolio", async () => {
   const result = await callTool("proprietio_search_properties", { state: "TX" });
   const properties = result.properties as Array<{ property_id: string; name: string }>;
@@ -92,4 +97,64 @@ test("review prompt: residents at The Madison with balances are stable", async (
       ["David Park", 4900],
     ],
   );
+});
+
+test("review fixture mode keeps submitted prompts deterministic even with the live backend enabled", async () => {
+  const previousBackendMode = process.env.BACKEND_MODE;
+  const previousReviewFixtures = process.env.OPENAI_REVIEW_FIXTURES;
+  process.env.BACKEND_MODE = "live";
+  process.env.OPENAI_REVIEW_FIXTURES = "true";
+
+  try {
+    const propertiesResult = await callTool("proprietio_search_properties", { state: "TX" });
+    assert.equal(propertiesResult.count, 3);
+
+    const delinquencyResult = await callTool("proprietio_get_delinquency", {
+      scope_id: "port_tx",
+      as_of_date: "2026-05-31",
+      group_by: "property",
+    });
+    assert.deepEqual(delinquencyResult.totals, {
+      "0_30": 8950,
+      "31_60": 2150,
+      "61_90": 1700,
+      "90_plus": 0,
+      total: 12800,
+    });
+
+    const noiResult = await callTool("proprietio_get_noi", {
+      scope_id: "prop_001",
+      period_start: "2026-05-01",
+      period_end: "2026-05-31",
+    });
+    assert.equal(noiResult.noi, 3981);
+
+    const workOrdersResult = await callTool("proprietio_search_work_orders", {
+      status: "open",
+      min_days_open: 7,
+    });
+    assert.deepEqual(
+      (workOrdersResult.work_orders as Array<{ work_order_id: string }>).map((w) => w.work_order_id),
+      ["wo_002", "wo_004"],
+    );
+
+    const residentsResult = await callTool("proprietio_list_residents", {
+      property_id: "prop_001",
+    });
+    assert.deepEqual(
+      (residentsResult.residents as Array<{ full_name: string; balance_due: number }>).map((r) => [
+        r.full_name,
+        r.balance_due,
+      ]),
+      [
+        ["Sarah Chen", 0],
+        ["Marcus Johnson", 2350],
+        ["Elena Johnson", 0],
+        ["David Park", 4900],
+      ],
+    );
+  } finally {
+    restoreEnv("BACKEND_MODE", previousBackendMode);
+    restoreEnv("OPENAI_REVIEW_FIXTURES", previousReviewFixtures);
+  }
 });

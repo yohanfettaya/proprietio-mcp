@@ -10,6 +10,7 @@ import {
 } from "../types.js";
 import { properties, units, residents, leases } from "../data/mock.js";
 import { rentaly, isLiveBackend } from "../api/rentaly-client.js";
+import { shouldUseReviewAccountingScope } from "../review-fixtures.js";
 import type { ToolDefinition } from "./index.js";
 
 function todayIso() {
@@ -43,7 +44,7 @@ export const accountingTools: ToolDefinition[] = [
     annotationRationale:
       "Computes a rent-roll snapshot from current data; read-only and non-destructive. Idempotent — the same scope/date returns the same snapshot with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
-      if (isLiveBackend()) return rentaly.getRentRoll(args);
+      if (!shouldUseReviewAccountingScope(args) && isLiveBackend()) return rentaly.getRentRoll(args);
       const asOf = args.as_of_date ?? todayIso();
       const inScopeUnits = units.filter(u => inScope(args.scope_id, u.property_id));
       const occupied = inScopeUnits.filter(u => u.occupied);
@@ -81,7 +82,7 @@ export const accountingTools: ToolDefinition[] = [
     annotationRationale:
       "Computes an AR aging / delinquency report; read-only and non-destructive. Idempotent — same scope/grouping returns the same buckets with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
-      if (isLiveBackend()) return rentaly.getDelinquency(args);
+      if (!shouldUseReviewAccountingScope(args) && isLiveBackend()) return rentaly.getDelinquency(args);
       const asOf = args.as_of_date ?? todayIso();
       const delinquentResidents = residents.filter(r => r.balance_due > 0 && inScope(args.scope_id, r.property_id));
 
@@ -153,7 +154,7 @@ export const accountingTools: ToolDefinition[] = [
     annotationRationale:
       "Computes a P&L for a scope and period; read-only and non-destructive. Idempotent — the same inputs produce the same statement with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
-      if (isLiveBackend()) return rentaly.getIncomeStatement(args);
+      if (!shouldUseReviewAccountingScope(args) && isLiveBackend()) return rentaly.getIncomeStatement(args);
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
       const months = inclusiveMonthCount(args.period_start, args.period_end);
 
@@ -200,7 +201,7 @@ export const accountingTools: ToolDefinition[] = [
     annotationRationale:
       "Computes a balance sheet as of a date; read-only and non-destructive. Idempotent — same scope/date returns the same figures with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
-      if (isLiveBackend()) return rentaly.getBalanceSheet(args);
+      if (!shouldUseReviewAccountingScope(args) && isLiveBackend()) return rentaly.getBalanceSheet(args);
       const asOf = args.as_of_date ?? todayIso();
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
       const realEstate = inScopeProps.reduce((s, p) => s + p.current_value, 0);
@@ -229,7 +230,7 @@ export const accountingTools: ToolDefinition[] = [
     annotationRationale:
       "Returns GL entries filtered by account and date range; read-only and non-destructive. Idempotent — the same filters return the same entries with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
-      if (isLiveBackend()) return rentaly.getGeneralLedger(args);
+      if (!shouldUseReviewAccountingScope(args) && isLiveBackend()) return rentaly.getGeneralLedger(args);
       const accounts = [
         "4000-Rental Income",
         "4100-Late Fees",
@@ -282,7 +283,7 @@ export const accountingTools: ToolDefinition[] = [
     annotationRationale:
       "Computes Net Operating Income for a scope and period; read-only and non-destructive. Idempotent — the same inputs produce the same NOI with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
-      if (isLiveBackend()) return rentaly.getNoi(args);
+      if (!shouldUseReviewAccountingScope(args) && isLiveBackend()) return rentaly.getNoi(args);
       // Reuse income statement logic for consistency
       const inScopeProps = properties.filter(p => inScope(args.scope_id, p.property_id));
       const months = inclusiveMonthCount(args.period_start, args.period_end);

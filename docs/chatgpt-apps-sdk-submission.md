@@ -142,8 +142,10 @@ ChatGPT is naming-agnostic and reuses them verbatim. **14 read, 4 write.**
 1. In ChatGPT → Settings → Apps/Connectors → add the Proprietio app.
 2. OAuth prompt → log in with the reviewer demo credentials (provided privately, not in
    this file). Consent screen shows the requested scopes; click Approve.
-3. Run these prompts (read-only, deterministic against the seeded demo portfolio). Use
-   the exact prompts and expected outcomes below in the OpenAI submission form:
+3. Run these prompts (read-only, deterministic against the seeded demo portfolio). In
+   production review deployments, keep `OPENAI_REVIEW_FIXTURES=true` so these exact
+   reviewer prompts route to the seeded demo fixtures even when `BACKEND_MODE=live`.
+   Use the exact prompts and expected outcomes below in the OpenAI submission form:
 
    | Prompt | Expected tool call | Expected outcome |
    |---|---|---|

@@ -7,6 +7,13 @@ import {
 } from "../types.js";
 import { properties, units, leases, residents } from "../data/mock.js";
 import { rentaly, isLiveBackend } from "../api/rentaly-client.js";
+import {
+  shouldUseReviewGetLease,
+  shouldUseReviewGetProperty,
+  shouldUseReviewListResidents,
+  shouldUseReviewListUnits,
+  shouldUseReviewSearchProperties,
+} from "../review-fixtures.js";
 import type { ToolDefinition } from "./index.js";
 
 export const propertyTools: ToolDefinition[] = [
@@ -20,6 +27,9 @@ export const propertyTools: ToolDefinition[] = [
     annotationRationale:
       "Read-only search over the property portfolio; never writes, so readOnlyHint=true and destructiveHint=false. Idempotent — the same filters return the same set with no side effects. Closed-world: queries only the configured Proprietio backend, never the open web (openWorldHint=false).",
     handler: (args) => {
+      if (shouldUseReviewSearchProperties(args)) {
+        return { count: properties.length, properties: [...properties] };
+      }
       if (isLiveBackend()) return rentaly.searchProperties(args);
       let out = [...properties];
       if (args.city) out = out.filter(p => p.city.toLowerCase().includes(args.city!.toLowerCase()));
@@ -40,6 +50,13 @@ export const propertyTools: ToolDefinition[] = [
     annotationRationale:
       "Fetches one property (with units and active leases) by ID; a pure read with no mutation, so readOnlyHint=true / destructiveHint=false. Idempotent — repeated lookups of the same ID return the same record. Backend-only, so openWorldHint=false.",
     handler: (args) => {
+      if (shouldUseReviewGetProperty(args)) {
+        const property = properties.find(p => p.property_id === args.property_id);
+        if (!property) throw new Error(`Property not found: ${args.property_id}`);
+        const propertyUnits = units.filter(u => u.property_id === args.property_id);
+        const activeLeases = leases.filter(l => l.property_id === args.property_id && l.status === "active");
+        return { property, units: propertyUnits, active_leases: activeLeases };
+      }
       if (isLiveBackend()) return rentaly.getProperty(args);
       const property = properties.find(p => p.property_id === args.property_id);
       if (!property) throw new Error(`Property not found: ${args.property_id}`);
@@ -58,6 +75,18 @@ export const propertyTools: ToolDefinition[] = [
     annotationRationale:
       "Lists units (occupancy, rent) for a property; read-only and non-destructive. Idempotent — same property yields the same unit list with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
+      if (shouldUseReviewListUnits(args)) {
+        let out = units.filter(u => u.property_id === args.property_id);
+        if (args.occupied_only) out = out.filter(u => u.occupied);
+        const occupancyRate = out.length === 0 ? 0 :
+          (out.filter(u => u.occupied).length / out.length) * 100;
+        return {
+          property_id: args.property_id,
+          unit_count: out.length,
+          occupancy_rate_pct: Math.round(occupancyRate * 10) / 10,
+          units: out,
+        };
+      }
       if (isLiveBackend()) return rentaly.listUnits(args);
       let out = units.filter(u => u.property_id === args.property_id);
       if (args.occupied_only) out = out.filter(u => u.occupied);
@@ -81,6 +110,13 @@ export const propertyTools: ToolDefinition[] = [
     annotationRationale:
       "Returns lease terms, residents, and unit by lease ID; a pure read, so readOnlyHint=true / destructiveHint=false. Idempotent — repeated reads of the same lease are identical. Backend-only, so openWorldHint=false.",
     handler: (args) => {
+      if (shouldUseReviewGetLease(args)) {
+        const lease = leases.find(l => l.lease_id === args.lease_id);
+        if (!lease) throw new Error(`Lease not found: ${args.lease_id}`);
+        const leaseResidents = residents.filter(r => lease.resident_ids.includes(r.resident_id));
+        const unit = units.find(u => u.unit_id === lease.unit_id);
+        return { lease, residents: leaseResidents, unit };
+      }
       if (isLiveBackend()) return rentaly.getLease(args);
       const lease = leases.find(l => l.lease_id === args.lease_id);
       if (!lease) throw new Error(`Lease not found: ${args.lease_id}`);
@@ -99,6 +135,12 @@ export const propertyTools: ToolDefinition[] = [
     annotationRationale:
       "Lists residents (contact info, balance due) for a property or unit; read-only and non-destructive. Idempotent — same scope returns the same residents with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
+      if (shouldUseReviewListResidents(args)) {
+        let out = residents;
+        if (args.unit_id) out = out.filter(r => r.unit_id === args.unit_id);
+        else if (args.property_id) out = out.filter(r => r.property_id === args.property_id);
+        return { count: out.length, residents: out };
+      }
       if (isLiveBackend()) return rentaly.listResidents(args);
       let out = residents;
       if (args.unit_id) out = out.filter(r => r.unit_id === args.unit_id);

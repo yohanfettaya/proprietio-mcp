@@ -7,6 +7,10 @@ import {
 } from "../types.js";
 import { workOrders, vendors, nextWorkOrderId } from "../data/mock.js";
 import { rentaly, isLiveBackend } from "../api/rentaly-client.js";
+import {
+  shouldUseReviewGetWorkOrder,
+  shouldUseReviewSearchWorkOrders,
+} from "../review-fixtures.js";
 import type { ToolDefinition } from "./index.js";
 
 export const maintenanceTools: ToolDefinition[] = [
@@ -20,6 +24,10 @@ export const maintenanceTools: ToolDefinition[] = [
     annotationRationale:
       "Searches work orders by filter; read-only and non-destructive. Idempotent — the same filters return the same matches with no side effects. Backend-only, so openWorldHint=false.",
     handler: (args) => {
+      if (shouldUseReviewSearchWorkOrders(args)) {
+        const out = workOrders.filter(w => w.status === "open" && w.days_open >= args.min_days_open!);
+        return { count: out.length, work_orders: out };
+      }
       if (isLiveBackend()) return rentaly.searchWorkOrders(args);
       let out = [...workOrders];
       if (args.property_id) out = out.filter(w => w.property_id === args.property_id);
@@ -39,6 +47,12 @@ export const maintenanceTools: ToolDefinition[] = [
     annotationRationale:
       "Fetches one work order (timeline, vendor, resolution) by ID; a pure read, so readOnlyHint=true / destructiveHint=false. Idempotent — repeated reads of the same ID are identical. Backend-only, so openWorldHint=false.",
     handler: (args) => {
+      if (shouldUseReviewGetWorkOrder(args)) {
+        const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
+        if (!wo) throw new Error(`Work order not found: ${args.work_order_id}`);
+        const vendor = wo.assigned_vendor_id ? vendors.find(v => v.vendor_id === wo.assigned_vendor_id) : null;
+        return { work_order: wo, assigned_vendor: vendor };
+      }
       if (isLiveBackend()) return rentaly.getWorkOrder(args);
       const wo = workOrders.find(w => w.work_order_id === args.work_order_id);
       if (!wo) throw new Error(`Work order not found: ${args.work_order_id}`);
