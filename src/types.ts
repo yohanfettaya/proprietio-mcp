@@ -118,6 +118,11 @@ export const ListUnitsInput = z.object({
 
 export const GetLeaseInput = z.object({
   lease_id: z.string(),
+  include_contact_info: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe("Set true only when the user explicitly asks for resident contact details or a follow-up action requires resident identifiers. Defaults to false to omit emails, phones, and internal resident IDs."),
 });
 
 export const ListResidentsInput = z.object({
@@ -129,6 +134,11 @@ export const ListResidentsInput = z.object({
     .string()
     .optional()
     .describe("Unit ID such as 'unit_001_104'. Provide this when listing residents for one unit. Do not also provide property_id."),
+  include_contact_info: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe("Set true only when the user explicitly asks for resident contact details or a follow-up action requires resident identifiers. Defaults to false to omit emails, phones, and internal resident IDs."),
 }).refine(
   (v) => Boolean(v.property_id) !== Boolean(v.unit_id),
   "Provide exactly one of property_id or unit_id",

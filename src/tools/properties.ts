@@ -16,6 +16,19 @@ import {
 } from "../review-fixtures.js";
 import type { ToolDefinition } from "./index.js";
 
+type ResidentSummary = {
+  full_name: string;
+  balance_due: number;
+};
+
+function residentRows<T extends ResidentSummary>(rows: T[], includeContactInfo: boolean) {
+  if (includeContactInfo) return rows;
+  return rows.map((r) => ({
+    full_name: r.full_name,
+    balance_due: r.balance_due,
+  }));
+}
+
 export const propertyTools: ToolDefinition[] = [
   {
     name: "proprietio_search_properties",
@@ -104,48 +117,60 @@ export const propertyTools: ToolDefinition[] = [
     name: "proprietio_get_lease",
     title: "Get Lease Details",
     description:
-      "Get full lease details: tenant, term, rent, deposit, and status.",
+      "Get lease details: tenant names, term, rent, deposit, and status. Omits resident email, phone, and internal resident IDs unless include_contact_info=true is explicitly needed.",
     inputSchema: GetLeaseInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     annotationRationale:
-      "Returns lease terms, residents, and unit by lease ID; a pure read, so readOnlyHint=true / destructiveHint=false. Idempotent — repeated reads of the same lease are identical. Backend-only, so openWorldHint=false.",
-    handler: (args) => {
+      "Returns lease terms, residents, and unit by lease ID; a pure read, so readOnlyHint=true / destructiveHint=false. Idempotent — repeated reads of the same lease are identical. Backend-only, so openWorldHint=false. Resident contact fields are redacted by default.",
+    handler: async (args) => {
       if (shouldUseReviewGetLease(args)) {
         const lease = leases.find(l => l.lease_id === args.lease_id);
         if (!lease) throw new Error(`Lease not found: ${args.lease_id}`);
         const leaseResidents = residents.filter(r => lease.resident_ids.includes(r.resident_id));
         const unit = units.find(u => u.unit_id === lease.unit_id);
-        return { lease, residents: leaseResidents, unit };
+        return { lease, residents: residentRows(leaseResidents, args.include_contact_info), unit };
       }
-      if (isLiveBackend()) return rentaly.getLease(args);
+      if (isLiveBackend()) {
+        const result = await rentaly.getLease(args);
+        return {
+          ...result,
+          residents: residentRows(result.residents, args.include_contact_info),
+        };
+      }
       const lease = leases.find(l => l.lease_id === args.lease_id);
       if (!lease) throw new Error(`Lease not found: ${args.lease_id}`);
       const leaseResidents = residents.filter(r => lease.resident_ids.includes(r.resident_id));
       const unit = units.find(u => u.unit_id === lease.unit_id);
-      return { lease, residents: leaseResidents, unit };
+      return { lease, residents: residentRows(leaseResidents, args.include_contact_info), unit };
     },
   },
   {
     name: "proprietio_list_residents",
     title: "List Residents",
     description:
-      "List residents for exactly one target: either a property or a unit. Returns contact info and current balance due.",
+      "List residents for exactly one target: either a property or a unit. Returns names and current balance due by default; returns contact details and internal IDs only when include_contact_info=true is explicitly needed.",
     inputSchema: ListResidentsInput,
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     annotationRationale:
-      "Lists residents (contact info, balance due) for a property or unit; read-only and non-destructive. Idempotent — same scope returns the same residents with no side effects. Backend-only, so openWorldHint=false.",
-    handler: (args) => {
+      "Lists residents for a property or unit; read-only and non-destructive. Idempotent — same scope returns the same residents with no side effects. Backend-only, so openWorldHint=false. Resident contact fields and internal IDs are redacted by default.",
+    handler: async (args) => {
       if (shouldUseReviewListResidents(args)) {
         let out = residents;
         if (args.unit_id) out = out.filter(r => r.unit_id === args.unit_id);
         else if (args.property_id) out = out.filter(r => r.property_id === args.property_id);
-        return { count: out.length, residents: out };
+        return { count: out.length, residents: residentRows(out, args.include_contact_info) };
       }
-      if (isLiveBackend()) return rentaly.listResidents(args);
+      if (isLiveBackend()) {
+        const result = await rentaly.listResidents(args);
+        return {
+          ...result,
+          residents: residentRows(result.residents, args.include_contact_info),
+        };
+      }
       let out = residents;
       if (args.unit_id) out = out.filter(r => r.unit_id === args.unit_id);
       else if (args.property_id) out = out.filter(r => r.property_id === args.property_id);
-      return { count: out.length, residents: out };
+      return { count: out.length, residents: residentRows(out, args.include_contact_info) };
     },
   },
 ];

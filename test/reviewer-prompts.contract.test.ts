@@ -85,7 +85,7 @@ test("review prompt: residents at The Madison with balances are stable", async (
   const result = await callTool("proprietio_list_residents", {
     property_id: "prop_001",
   });
-  const residents = result.residents as Array<{ full_name: string; balance_due: number }>;
+  const residents = result.residents as Array<Record<string, unknown> & { full_name: string; balance_due: number }>;
 
   assert.equal(result.count, 4);
   assert.deepEqual(
@@ -97,6 +97,26 @@ test("review prompt: residents at The Madison with balances are stable", async (
       ["David Park", 4900],
     ],
   );
+  for (const resident of residents) {
+    assert.equal("email" in resident, false);
+    assert.equal("phone" in resident, false);
+    assert.equal("resident_id" in resident, false);
+    assert.equal("unit_id" in resident, false);
+    assert.equal("property_id" in resident, false);
+  }
+});
+
+test("resident contact fields are returned only when explicitly requested", async () => {
+  const result = await callTool("proprietio_list_residents", {
+    property_id: "prop_001",
+    include_contact_info: true,
+  });
+  const residents = result.residents as Array<Record<string, unknown>>;
+
+  assert.equal(result.count, 4);
+  assert.equal(residents[0].resident_id, "res_001");
+  assert.equal(residents[0].email, "sarah.chen@example.com");
+  assert.equal(residents[0].phone, "+1-512-555-0101");
 });
 
 test("review fixture mode keeps submitted prompts deterministic even with the live backend enabled", async () => {
@@ -141,8 +161,11 @@ test("review fixture mode keeps submitted prompts deterministic even with the li
     const residentsResult = await callTool("proprietio_list_residents", {
       property_id: "prop_001",
     });
+    const reviewResidents = residentsResult.residents as Array<
+      Record<string, unknown> & { full_name: string; balance_due: number }
+    >;
     assert.deepEqual(
-      (residentsResult.residents as Array<{ full_name: string; balance_due: number }>).map((r) => [
+      reviewResidents.map((r) => [
         r.full_name,
         r.balance_due,
       ]),
@@ -153,6 +176,11 @@ test("review fixture mode keeps submitted prompts deterministic even with the li
         ["David Park", 4900],
       ],
     );
+    for (const resident of reviewResidents) {
+      assert.equal("email" in resident, false);
+      assert.equal("phone" in resident, false);
+      assert.equal("resident_id" in resident, false);
+    }
   } finally {
     restoreEnv("BACKEND_MODE", previousBackendMode);
     restoreEnv("OPENAI_REVIEW_FIXTURES", previousReviewFixtures);
