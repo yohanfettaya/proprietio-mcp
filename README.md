@@ -50,7 +50,8 @@ src/
 ├── auth.ts             OAuth 2.0 metadata + bearer middleware
 ├── types.ts            Zod input schemas + entity types
 ├── tools/
-│   ├── index.ts        Tool registry (18 tools)
+│   ├── index.ts        Tool registry (19 public tools + 1 debug)
+│   ├── operations.ts   Daily operations brief (1)
 │   ├── properties.ts   Leasing & properties (5)
 │   ├── accounting.ts   GL, rent roll, P&L, NOI (6)
 │   ├── maintenance.ts  Work orders & vendors (6)
@@ -61,10 +62,11 @@ src/
 
 ---
 
-## Tools (18)
+## Tools (19 public)
 
 | Domain | Tool | Scope |
 |--------|------|-------|
+| Operations | `proprietio_get_daily_brief` | `properties:read` + `accounting:read` + `maintenance:read` |
 | Properties | `proprietio_search_properties` | `properties:read` |
 | Properties | `proprietio_get_property` | `properties:read` |
 | Properties | `proprietio_list_units` | `properties:read` |
@@ -127,11 +129,12 @@ Add the remote MCP at `https://your-host/mcp` in Claude Settings → Connectors.
 
 Once Claude is connected, try:
 
-1. *"What's the delinquency rate across my Texas portfolio this month, grouped by property?"*
-2. *"Show me all open maintenance work orders older than 7 days and draft a vendor follow-up message."*
-3. *"What's the NOI for The Madison in May 2026?"*
-4. *"Create a high-priority work order for unit 102 at The Madison — kitchen sink is leaking."*
-5. *"Compare rent roll between Riverbend Lofts and Hill Country Commons."*
+1. *"Give me today's Proprietio operations brief for my portfolio."*
+2. *"What's the delinquency rate across my Texas portfolio this month, grouped by property?"*
+3. *"Show me all open maintenance work orders older than 7 days and draft a vendor follow-up message."*
+4. *"What's the NOI for The Madison in May 2026?"*
+5. *"Create a high-priority work order for unit 102 at The Madison — kitchen sink is leaking."*
+6. *"Compare rent roll between Riverbend Lofts and Hill Country Commons."*
 
 ---
 
@@ -148,7 +151,7 @@ verbatim to rentaly via a per-request `AsyncLocalStorage` context (never stored)
 resolves `token → organizationId` and enforces scopes per route — the real boundary.
 
 Scopes: `properties:read`, `tenants:read`, `accounting:read`, `maintenance:read`,
-`maintenance:write`, `communications:write` (14 read tools, 4 write). `src/scopes.ts`
+`maintenance:write`, `communications:write` (15 public read tools, 4 write). `src/scopes.ts`
 mirrors the tool→scope map advisory-only, to name a missing scope in the error.
 
 ### Demo / open mode (local dev)

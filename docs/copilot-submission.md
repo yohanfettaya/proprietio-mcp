@@ -30,7 +30,7 @@ A2 is paperwork + attestations, mostly non-engineering.
 
 ## 1. What reuses as-is
 
-Same MCP server, same 18 tools, same `structuredContent` + annotations Claude and ChatGPT
+Same MCP server, same 19 public tools, same `structuredContent` + annotations Claude and ChatGPT
 use. Copilot Studio's MCP connector speaks Streamable HTTP. **Zero server changes for A1.**
 The only Copilot-specific concept is *how the user authenticates*: instead of registering
 directly against our OAuth (DCR like ChatGPT), enterprise tenants authenticate through
@@ -66,7 +66,7 @@ enforcement stays at rentaly's `/api/v1/*` — unchanged.
 - Add a **custom MCP connector** (or custom connector with the MCP action) targeting
   `https://mcp.proprietio.com/mcp`.
 - Auth: OAuth 2.0 via the Entra app from §2.1.
-- Surface the tools as a Copilot **agent**; optionally curate which of the 18 show (never
+- Surface the tools as a Copilot **agent**; optionally curate which of the 19 public tools show (never
   rename — frozen contract). Recommend leading with the read tools; gate writes behind the
   two write scopes at consent.
 - Test in your own M365 tenant before any marketplace step.

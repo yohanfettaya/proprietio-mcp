@@ -119,6 +119,30 @@ test("resident contact fields are returned only when explicitly requested", asyn
   assert.equal(residents[0].phone, "+1-512-555-0101");
 });
 
+test("v2 daily brief prioritizes operations without resident PII", async () => {
+  const result = await callTool("proprietio_get_daily_brief", {
+    scope_id: "port_tx",
+    as_of_date: "2026-05-31",
+    max_items: 6,
+  });
+  const priorities = result.priorities as Array<Record<string, unknown>>;
+  const riskSummary = result.risk_summary as Record<string, unknown>;
+
+  assert.match(String(result.headline), /urgent work order/);
+  assert.equal((result.portfolio as Record<string, unknown>).unit_count, 10);
+  assert.equal(riskSummary.delinquency_total, 12800);
+  assert.equal(riskSummary.urgent_work_order_count, 3);
+  assert.equal(riskSummary.stale_work_order_count, 3);
+  assert.ok(priorities.length > 0);
+  assert.equal(priorities[0].priority, "critical");
+  assert.equal(priorities[0].source_id, "wo_006");
+
+  const serialized = JSON.stringify(result);
+  assert.equal(serialized.includes("sarah.chen@example.com"), false);
+  assert.equal(serialized.includes("+1-512-555-0101"), false);
+  assert.equal(serialized.includes("resident_id"), false);
+});
+
 test("review fixture mode keeps submitted prompts deterministic even with the live backend enabled", async () => {
   const previousBackendMode = process.env.BACKEND_MODE;
   const previousReviewFixtures = process.env.OPENAI_REVIEW_FIXTURES;

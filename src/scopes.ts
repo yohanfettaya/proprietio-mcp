@@ -13,6 +13,8 @@
  *   maintenance:read · maintenance:write · communications:write
  */
 export const TOOL_SCOPES: Record<string, string> = {
+  // Operations cockpit (read bundle)
+  proprietio_get_daily_brief: "properties:read accounting:read maintenance:read",
   // Properties (properties:read)
   proprietio_search_properties: "properties:read",
   proprietio_get_property: "properties:read",

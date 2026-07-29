@@ -3,7 +3,7 @@ info:
   title: Proprietio
   description: >-
     Property management, accounting, and maintenance connector for Microsoft 365
-    Copilot. Exposes the live Proprietio MCP server (18 tools) over Streamable
+    Copilot. Exposes the live Proprietio MCP server (19 public tools) over Streamable
     HTTP. Query and act on your portfolio in natural language: properties &
     leasing, GL / rent roll / P&L / NOI / delinquency, work orders & vendors,
     and resident/vendor messaging. Multi-tenant: the OAuth token resolves to one

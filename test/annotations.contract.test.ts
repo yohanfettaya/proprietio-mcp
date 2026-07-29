@@ -49,7 +49,8 @@ const EXPECTED: Record<
     idempotentHint: boolean;
   }
 > = {
-  // Read-only (14) — all idempotent
+  // Read-only (15 public + 1 debug) — all idempotent
+  proprietio_get_daily_brief: { title: "Get Daily Operations Brief", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
   proprietio_search_properties: { title: "Search Properties", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
   proprietio_get_property: { title: "Get Property Details", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
   proprietio_list_units: { title: "List Units in a Property", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
@@ -75,16 +76,16 @@ const EXPECTED: Record<
   proprietio_whoami: { title: "Who Am I (Debug)", readOnlyHint: true, destructiveHint: false, idempotentHint: true },
 };
 
-// The 15 read tools and 4 write tools (debug whoami counts as read).
+// The 16 read tools and 4 write tools (debug whoami counts as read).
 const READ_TOOLS = Object.entries(EXPECTED).filter(([, v]) => v.readOnlyHint).map(([k]) => k);
 const WRITE_TOOLS = Object.entries(EXPECTED).filter(([, v]) => !v.readOnlyHint).map(([k]) => k);
 
-test("all 19 tools are registered (18 public + 1 debug)", () => {
-  assert.equal(allTools.length, 19);
+test("all 20 tools are registered (19 public + 1 debug)", () => {
+  assert.equal(allTools.length, 20);
 });
 
-test("read/write split is exactly 15 / 4 (14 public reads + 1 debug + 4 writes)", () => {
-  assert.equal(READ_TOOLS.length, 15, "expected 15 read tools (14 public + whoami debug)");
+test("read/write split is exactly 16 / 4 (15 public reads + 1 debug + 4 writes)", () => {
+  assert.equal(READ_TOOLS.length, 16, "expected 16 read tools (15 public + whoami debug)");
   assert.equal(WRITE_TOOLS.length, 4, "expected 4 write tools");
 });
 
@@ -120,7 +121,7 @@ test("openWorldHint is true only for proprietio_send_message (external email dis
   }
 });
 
-test("the 15 read tools have readOnlyHint=true", () => {
+test("the 16 read tools have readOnlyHint=true", () => {
   for (const name of READ_TOOLS) {
     const tool = allTools.find((t) => t.name === name)!;
     assert.ok(tool, `${name}: not registered`);
@@ -200,6 +201,7 @@ test("review-sensitive schemas express exactly-one target arguments", () => {
 
 test("review-sensitive schemas describe scope IDs, dates, and GL account filters", () => {
   for (const name of [
+    "proprietio_get_daily_brief",
     "proprietio_get_rent_roll",
     "proprietio_get_delinquency",
     "proprietio_get_income_statement",

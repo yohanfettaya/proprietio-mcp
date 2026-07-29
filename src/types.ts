@@ -21,6 +21,27 @@ const PeriodEndDate = IsoDate.describe("Inclusive period end date in YYYY-MM-DD 
 export const Money = z.number().nonnegative();
 export const Pct = z.number().min(0).max(100);
 
+// ---------- Operations ----------
+export const GetDailyBriefInput = z.object({
+  scope_id: ScopeId.optional()
+    .default("portfolio")
+    .describe("Property ID such as 'prop_001', portfolio ID such as 'port_tx', or 'portfolio' for the user's whole organization. Defaults to 'portfolio'."),
+  as_of_date: AsOfDate.optional(),
+  max_items: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .optional()
+    .default(8)
+    .describe("Maximum number of prioritized action items to return, from 1 to 20. Defaults to 8."),
+  include_links: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe("Whether to include Proprietio deep links for follow-up actions. Defaults to true."),
+});
+
 // ---------- Domain entities (output shapes) ----------
 export interface Property {
   property_id: string;

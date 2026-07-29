@@ -93,7 +93,7 @@ scope to enable it.
 
 ## Notes & gotchas
 
-- **18 tools, frozen names.** The `proprietio_*` names are the public contract
+- **19 public tools, stable names.** The `proprietio_*` names are the public contract
   (root `CLAUDE.md` §8). Curate *which* tools the agent surfaces if you like; never
   rename.
 - **Cold start.** The MCP server is on Render's free tier — the first call after

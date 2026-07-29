@@ -1,19 +1,19 @@
 # Proprietio x Claude MCP Integration — Status Brief
 
-Last updated: 2026-05-29
+Last updated: 2026-07-29
 
 This file is the handoff context for the Proprietio MCP server. Read it first before touching anything MCP-related.
 
 ---
 
-## 1. Status today (2026-05-29)
+## 1. Status today (2026-07-29)
 
 - Application submitted to the **Anthropic Partner Network / Connector Directory**. Awaiting review.
 - MCP server is **live** at `https://mcp.proprietio.com/mcp`.
 - Source repo: `https://github.com/yohanfettaya/proprietio-mcp`.
-- **18 tools** exposed, grouped: properties (5), accounting (6), maintenance (6), comms (1).
+- **19 public tools** exposed, grouped: operations (1), properties (5), accounting (6), maintenance (6), comms (1), plus 1 debug tool.
 - Hosted on **Render free tier** — instance spins down after ~15 min of inactivity, first call after sleep takes ~30s. Fine for demo, not for prod.
-- **Live backend wiring done (Phase 2, 2026-05-29).** All 18 handlers now call the real rentaly `/api/v1/*` API when `BACKEND_MODE=live`; the mock fixtures stay intact and serve when `BACKEND_MODE=mock` (the default). All HTTP, pagination, money (cents→dollars), and error mapping live in the single conversion point `src/api/rentaly-client.ts`. To go live in prod: set `RENTALY_API_BASE_URL` + `RENTALY_API_KEY` and flip `BACKEND_MODE=live` on Render, then `npm run smoke`.
+- **Live backend wiring done (Phase 2, 2026-05-29).** Handlers call the real rentaly `/api/v1/*` API when `BACKEND_MODE=live`; the mock fixtures stay intact and serve when `BACKEND_MODE=mock` (the default). All HTTP, pagination, money (cents→dollars), and error mapping live in the single conversion point `src/api/rentaly-client.ts`. To go live in prod: set `RENTALY_API_BASE_URL` + `RENTALY_API_KEY` and flip `BACKEND_MODE=live` on Render, then `npm run smoke`.
 
 ---
 
@@ -46,7 +46,7 @@ git clone https://github.com/yohanfettaya/proprietio-mcp
 cd proprietio-mcp
 npm install
 npm run dev      # starts server on :3000
-npm run demo     # in another terminal — exercises all 18 tools (mock data)
+npm run demo     # in another terminal — exercises the mock data tools
 ```
 
 **Live backend smoke test (real rentaly API):**
@@ -81,7 +81,10 @@ In rough priority order:
 
 ---
 
-## 5. The 18 tools
+## 5. The 19 public tools
+
+**Operations (1)**
+- `proprietio_get_daily_brief` — prioritized daily operating brief across delinquency, maintenance, vacancy, loss-to-lease, and next actions.
 
 **Properties (5)**
 - `proprietio_search_properties` — search portfolio by address, owner, status.
@@ -135,7 +138,7 @@ Live URLs:
 
 ## 8. DO NOT modify
 
-The **18 tool names and their input schemas are the public MCP contract** submitted to Anthropic. Every Claude integration that lands binds against these names and shapes.
+The **19 public tool names and their input schemas are the public MCP contract**. Every integration that lands binds against these names and shapes.
 
 - Do **not** rename a tool.
 - Do **not** remove or rename a field on an input schema.

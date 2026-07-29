@@ -14,7 +14,7 @@ import { allTools, type ToolDefinition } from "./tools/index.js";
 import { scopeForTool } from "./scopes.js";
 
 const SERVER_NAME = process.env.MCP_SERVER_NAME ?? "proprietio-mcp";
-const SERVER_VERSION = process.env.MCP_SERVER_VERSION ?? "0.1.0";
+const SERVER_VERSION = process.env.MCP_SERVER_VERSION ?? "2.0.0";
 
 type JsonObject = Record<string, unknown>;
 
@@ -155,7 +155,7 @@ export function createServer(): Server {
       // boundary (it 403s insufficient_scope); we only name the missing scope.
       const scope = scopeForTool(tool.name);
       if (scope && /forbidden|insufficient_scope|missing the required scope/i.test(msg)) {
-        msg += ` (this tool requires the "${scope}" scope — re-authorize the connector to grant it)`;
+        msg += ` (this tool requires the "${scope}" scope(s) — re-authorize the connector to grant them)`;
       }
       return {
         isError: true,

@@ -5,7 +5,7 @@ ChatGPT Apps SDK consumes an MCP server over Streamable HTTP — **the same serv
 already runs in prod** — so there is no new build. This packet is collateral + a reviewer
 runbook only.
 
-Status: 2026-05-31 · ready to submit · OAuth 2.1 live in prod (the former blocker).
+Status: 2026-07-29 · v1.0.0 published · v2 adds the daily operations brief.
 Owner: Yohan Fettaya (yohan@proprietio.com).
 
 ---
@@ -22,10 +22,10 @@ machine-readable tool metadata. All four are live:
 | OAuth 2.1 Authorization Code + PKCE S256 | live | `https://api.proprietio.com/.well-known/oauth-authorization-server` → 200 |
 | Dynamic Client Registration (RFC 7591) | live | `POST https://api.proprietio.com/oauth/register` |
 | Protected-resource discovery (RFC 9728) | live | connector 401 → `WWW-Authenticate` → resource doc |
-| Tool annotations (`readOnlyHint` etc.) | live | `tools/list` returns annotations on all 18 |
+| Tool annotations (`readOnlyHint` etc.) | live | `tools/list` returns annotations on all 19 public tools |
 | `structuredContent` on results | live | `tools/call` returns it alongside the text block |
 
-ChatGPT's safety review keys off the annotations: 14 tools are `readOnlyHint: true`; the 3
+ChatGPT's safety review keys off the annotations: 15 public tools are `readOnlyHint: true`; the 3
 maintenance writes plus `send_message` are not. `update_work_order`, `close_work_order`, and
 `send_message` are conservatively marked destructive; only `proprietio_send_message` is
 `openWorldHint: true` (it leaves the system — sends to a resident/vendor).
@@ -107,13 +107,14 @@ behavior — not a bug.
 
 ---
 
-## 3. Tool catalog (18 — frozen public contract)
+## 3. Tool catalog (19 public tools)
 
 Names and input schemas are the frozen Anthropic-side contract (root `CLAUDE.md` §8);
-ChatGPT is naming-agnostic and reuses them verbatim. **14 read, 4 write.**
+ChatGPT is naming-agnostic and reuses them verbatim. **15 read, 4 write.**
 
 | Domain | Tool (`name`) | Title | R/W | Scope |
 |---|---|---|---|---|
+| Operations | `proprietio_get_daily_brief` | Get daily operations brief | R | `properties:read` + `accounting:read` + `maintenance:read` |
 | Properties | `proprietio_search_properties` | Search properties | R | `properties:read` |
 | Properties | `proprietio_get_property` | Get property | R | `properties:read` |
 | Properties | `proprietio_list_units` | List units | R | `properties:read` |
@@ -149,6 +150,7 @@ ChatGPT is naming-agnostic and reuses them verbatim. **14 read, 4 write.**
 
    | Prompt | Expected tool call | Expected outcome |
    |---|---|---|
+   | *"Give me today's Proprietio operations brief for portfolio port_tx as of 2026-05-31."* | `proprietio_get_daily_brief` with `scope_id:"port_tx"`, `as_of_date:"2026-05-31"` | Returns a prioritized brief without resident PII: 10 units, `$12,800` delinquency, 3 urgent work orders, 3 stale work orders, 2 vacant units, and top priority `wo_006` emergency plumbing. |
    | *"Search my Proprietio properties in Texas."* | `proprietio_search_properties` with `state:"TX"` | 3 properties: The Madison (`prop_001`), Riverbend Lofts (`prop_002`), Hill Country Commons (`prop_003`). |
    | *"Show delinquency aging for portfolio port_tx as of 2026-05-31, grouped by property."* | `proprietio_get_delinquency` with `scope_id:"port_tx"`, `as_of_date:"2026-05-31"`, `group_by:"property"` | Total delinquency is `$12,800`: The Madison `$7,250`, Riverbend Lofts `$3,850`, Hill Country Commons `$1,700`. |
    | *"What was the NOI for The Madison, property prop_001, from 2026-05-01 to 2026-05-31?"* | `proprietio_get_noi` with `scope_id:"prop_001"`, `period_start:"2026-05-01"`, `period_end:"2026-05-31"` | One-month result: total revenue `$6,864`, operating expenses `$2,883`, NOI `$3,981`, NOI margin `58%`. |

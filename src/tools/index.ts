@@ -10,6 +10,7 @@ import { accountingTools } from "./accounting.js";
 import { maintenanceTools } from "./maintenance.js";
 import { commsTools } from "./comms.js";
 import { debugTools } from "./debug.js";
+import { operationsTools } from "./operations.js";
 
 /**
  * MCP tool annotations (per the MCP spec / Anthropic Connectors directory
@@ -71,6 +72,7 @@ export interface ToolDefinition<T extends ZodTypeAny = ZodTypeAny> {
 }
 
 export const allTools: ToolDefinition[] = [
+  ...operationsTools,
   ...propertyTools,
   ...accountingTools,
   ...maintenanceTools,
@@ -78,8 +80,8 @@ export const allTools: ToolDefinition[] = [
   ...debugTools,
 ];
 
-if (allTools.length !== 19) {
-  // Self-check at module load: the spec promises 18 public tools + 1 debug tool.
+if (allTools.length !== 20) {
+  // Self-check at module load: the spec promises 19 public tools + 1 debug tool.
   // Throwing here makes mismatches obvious in CI.
-  throw new Error(`Expected 19 tools, registered ${allTools.length}`);
+  throw new Error(`Expected 20 tools, registered ${allTools.length}`);
 }

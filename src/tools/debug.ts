@@ -1,5 +1,5 @@
 /**
- * Debug tools (1) — not part of the frozen 18-tool public contract.
+ * Debug tools (1) — not part of the 19-tool public contract.
  *
  * These tools are additive; they expose internal state for diagnosis and
  * never write anything. They may be removed once the platform is stable.

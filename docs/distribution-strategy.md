@@ -30,7 +30,7 @@ unlocked all three directories at once. Everything left is additive metadata (do
 or non-engineering submission collateral (the per-channel packets in §6).
 
 **Three rules that hold for every channel:**
-1. **One tool set, never renamed.** The 18 `proprietio_*` names are the frozen public
+1. **One tool set, never renamed.** The 19 public `proprietio_*` names are the public
    contract (root `CLAUDE.md` §8). ChatGPT and Copilot are naming-agnostic. Curate
    *which* tools show per channel if needed — never rename or fork.
 2. **No `draft_*` tools.** Drafting an email/notice is a native model capability. A draft
@@ -62,10 +62,10 @@ src/
 ├── auth.ts                  # OAuth metadata + bearerAuth (gated; open by default)
 ├── api/rentaly-client.ts    # single conversion point → api.proprietio.com (X-Api-Key)
 ├── data/mock.ts             # mock fixtures (BACKEND_MODE=mock fallback)
-├── types.ts                 # 18 Zod INPUT schemas
+├── types.ts                 # 19 public Zod INPUT schemas + debug
 └── tools/
-    ├── index.ts             # ToolDefinition + registry (self-checks === 18)
-    ├── properties.ts (5) · accounting.ts (6) · maintenance.ts (6) · comms.ts (1)
+    ├── index.ts             # ToolDefinition + registry (self-checks === 20)
+    ├── operations.ts (1) · properties.ts (5) · accounting.ts (6) · maintenance.ts (6) · comms.ts (1)
 ```
 Audit + rate limiting are **backend** concerns (rentaly), already shipped 2026-05-29
 (immutable `ApiAccessLog` + graceful 429 headers). The MCP server itself stays thin.
@@ -95,17 +95,17 @@ progress, target Q3 2026. So Copilot's "2-week sprint" is the *technical wiring*
 ## 4. Per-channel gap analysis (A reuse / B change / C missing)
 
 ### A. Reuses as-is across ALL channels (no change)
-Transport (stateless Streamable HTTP), the 18 tools + Zod input schemas, the
+Transport (stateless Streamable HTTP), the 19 public tools + Zod input schemas, the
 `rentaly-client` live backend, `/` and `/healthz` (CI-monitored), the MCP error contract.
 
 ### B. Apps-SDK / Copilot compatibility — DONE (this PR, additive, contract-safe)
-- **Tool annotations** on all 18: `readOnlyHint` / `destructiveHint` / `idempotentHint` /
-  `openWorldHint` + a human `title`. 14 reads, 4 writes; `update_work_order`,
+- **Tool annotations** on all 19 public tools: `readOnlyHint` / `destructiveHint` / `idempotentHint` /
+  `openWorldHint` + a human `title`. 15 reads, 4 writes; `update_work_order`,
   `close_work_order`, and `send_message` are conservatively marked destructive; only
   `send_message` is open-world. ChatGPT's safety review and Copilot both key off these.
 - **`structuredContent`** added to every `tools/call` result alongside the text block, so
   clients parse fields deterministically.
-- Verified over the wire: `tools/list` returns annotations on all 18; `tools/call`
+- Verified over the wire: `tools/list` returns annotations on all 19 public tools; `tools/call`
   returns `structuredContent`. Purely additive — frozen names/schemas untouched.
 
 **Deferred to V2 (per channel):** ChatGPT `ui://` widget resources +
@@ -148,7 +148,7 @@ user login, and sessions. State lives in three Prisma models (`OAuthClient` /
 
 ### The 6 scopes (frozen vocabulary, lockstep with rentaly `oauthConfig.js`)
 `properties:read` · `tenants:read` · `accounting:read` · `maintenance:read` ·
-`maintenance:write` · `communications:write` → 14 read tools, 4 write tools.
+`maintenance:write` · `communications:write` → 15 public read tools, 4 write tools.
 
 ### Multi-tenancy = token, not URL
 Tenant identity rides in the token. **No `/{workspace}/mcp` URL templating.** Copilot's
@@ -175,7 +175,10 @@ Entra ID is just a *federation bridge* layered on top: Entra `tid` → Proprieti
    with the Microsoft compliance dossier (Partner Center, MACE); SOC 2 as background work
    gating real enterprise deals. Packet ready:
    [`copilot-submission.md`](./copilot-submission.md).
-5. **V2 UI** — ChatGPT widgets and/or Copilot Adaptive Cards, only where conversion
+5. **V2 operations cockpit** — `proprietio_get_daily_brief` shipped as the first V2 tool:
+   a read-only prioritized operating brief across delinquency, maintenance, vacancy, and
+   loss-to-lease.
+6. **V2 UI** — ChatGPT widgets and/or Copilot Adaptive Cards, only where conversion
    justifies it. **Copilot Path B** (Teams app + Graph) only if Copilot converts.
 
 ---
