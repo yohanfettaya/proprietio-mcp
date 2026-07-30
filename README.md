@@ -220,5 +220,7 @@ MIT © Proprietio
 ## Contact
 
 - **Yohan Fettaya** — Founder & CEO — yohan@proprietio.com
-- **Developer docs** — https://developers.proprietio.com/mcp
+- **Support** — support@proprietio.com
+- **Help center** — https://www.proprietio.com/help
+- **Privacy policy** — https://www.proprietio.com/privacy
 - **Status page** — https://status.proprietio.com

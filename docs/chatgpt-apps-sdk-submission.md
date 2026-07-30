@@ -46,7 +46,7 @@ maintenance writes plus `send_message` are not. `update_work_order`, `close_work
 | Developer docs | https://developers.proprietio.com/mcp |
 | Support email | support@proprietio.com |
 | Security contact | security@proprietio.com |
-| Privacy policy URL | https://www.proprietio.com/legal/privacy |
+| Privacy policy URL | https://www.proprietio.com/privacy |
 | Terms of service URL | https://www.proprietio.com/legal/terms |
 | Status page | https://status.proprietio.com |
 | MCP endpoint | https://mcp.proprietio.com/mcp |

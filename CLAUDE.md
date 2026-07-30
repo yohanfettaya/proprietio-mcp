@@ -8,7 +8,7 @@ This file is the handoff context for the Proprietio MCP server. Read it first be
 
 ## 1. Status today (2026-07-29)
 
-- Application submitted to the **Anthropic Partner Network / Connector Directory**. Awaiting review.
+- Application submitted to the **Anthropic Partner Network / Connector Directory**. Anthropic review replied on 2026-07-29 that the tool set is approved in substance, with two listing-field fixes required before publication: support contact must be `support@proprietio.com`, and privacy policy must be `https://www.proprietio.com/privacy`.
 - MCP server is **live** at `https://mcp.proprietio.com/mcp`.
 - Source repo: `https://github.com/yohanfettaya/proprietio-mcp`.
 - **19 public tools** exposed, grouped: operations (1), properties (5), accounting (6), maintenance (6), comms (1), plus 1 debug tool.
@@ -75,7 +75,7 @@ In rough priority order:
 3. **Move off Render free tier** — paid Render tier or migrate to AWS (ECS Fargate behind ALB). Kill spin-down behavior.
 4. **SOC 2 Type II** attestation. In progress, target Q3 2026.
 5. **Pen test** with NCC Group, Q3 2026.
-6. **Public docs** at `developers.proprietio.com/mcp` — tool reference, auth flow, examples.
+6. **Public MCP docs** — use `https://www.proprietio.com/help` for directory documentation until a dedicated `developers.proprietio.com/mcp` page is published and returns 200.
 7. **Observability dashboard** — per-tool p50/p95 latency, error rate, auth failures. Datadog or Grafana Cloud.
 8. **Per-tenant rate limits** — once auth is real, enforce per-org quotas.
 
