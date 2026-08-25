@@ -20,6 +20,14 @@ function restoreEnv(name: string, value: string | undefined) {
   else process.env[name] = value;
 }
 
+function assertNoResidentPii(result: unknown) {
+  const serialized = JSON.stringify(result);
+  assert.equal(serialized.includes("sarah.chen@example.com"), false);
+  assert.equal(serialized.includes("+1-512-555-0101"), false);
+  assert.equal(serialized.includes("resident_id"), false);
+  assert.equal(serialized.includes("m.johnson@example.com"), false);
+}
+
 test("review prompt: search Texas properties returns the seeded portfolio", async () => {
   const result = await callTool("proprietio_search_properties", { state: "TX" });
   const properties = result.properties as Array<{ property_id: string; name: string }>;
@@ -143,6 +151,103 @@ test("v2 daily brief prioritizes operations without resident PII", async () => {
   assert.equal(serialized.includes("resident_id"), false);
 });
 
+test("v3 command center returns ranked KPIs, scorecards, and action queue without resident PII", async () => {
+  const result = await callTool("proprietio_get_command_center", {
+    scope_id: "port_tx",
+    as_of_date: "2026-05-31",
+    period_start: "2026-05-01",
+    period_end: "2026-05-31",
+    max_actions: 5,
+  });
+  const kpis = result.kpis as Array<{ id: string; value: number; trend: string }>;
+  const scorecards = result.property_scorecards as Array<Record<string, unknown>>;
+  const actionQueue = result.action_queue as Array<Record<string, unknown>>;
+  const riskSummary = result.risk_summary as Record<string, unknown>;
+  const highestRisk = riskSummary.highest_risk_property as Record<string, unknown>;
+
+  assert.equal(result.version, "3.0.0");
+  assert.deepEqual(kpis.map((k) => [k.id, k.value, k.trend]), [
+    ["occupancy", 80, "risk"],
+    ["delinquency", 12800, "risk"],
+    ["maintenance_load", 5, "risk"],
+    ["loss_to_lease", 3450, "watch"],
+    ["risk_exposure", 3, "risk"],
+  ]);
+  assert.deepEqual(
+    scorecards.map((s) => [s.property_id, s.property_name, s.risk_score, s.risk_level]),
+    [
+      ["prop_001", "The Madison", 89, "critical"],
+      ["prop_002", "Riverbend Lofts", 53, "medium"],
+      ["prop_003", "Hill Country Commons", 51, "medium"],
+    ],
+  );
+  assert.deepEqual(highestRisk, {
+    property_id: "prop_001",
+    property_name: "The Madison",
+    risk_score: 89,
+    risk_level: "critical",
+    top_risk: "1 high-priority work order(s) active",
+  });
+  assert.equal(actionQueue[0].source_id, "wo_006");
+  assert.equal(actionQueue[0].priority, "critical");
+  assert.equal((result.ui_model as Record<string, unknown>).presentation, "operations_command_center");
+  assertNoResidentPii(result);
+});
+
+test("v3 risk radar filters critical properties and identifies category-level drivers", async () => {
+  const result = await callTool("proprietio_get_risk_radar", {
+    scope_id: "port_tx",
+    as_of_date: "2026-05-31",
+    risk_threshold: "critical",
+  });
+  const scorecards = result.property_scorecards as Array<Record<string, unknown>>;
+  const radar = result.radar as Array<Record<string, unknown>>;
+  const summary = result.summary as Record<string, unknown>;
+
+  assert.equal(result.risk_threshold, "critical");
+  assert.deepEqual(scorecards.map((s) => [s.property_id, s.risk_level]), [["prop_001", "critical"]]);
+  assert.equal(summary.average_risk_score, 64);
+  assert.deepEqual(summary.risk_level_counts, {
+    critical: 1,
+    high: 0,
+    medium: 2,
+    low: 0,
+    healthy: 0,
+  });
+  assert.equal(radar[0].category, "maintenance");
+  assert.equal(radar[0].risk_score, 100);
+  assert.equal(radar[0].top_factor, "1 emergency work order(s) active");
+  assertNoResidentPii(result);
+});
+
+test("v3 owner update generates a copy-ready portfolio update without resident PII", async () => {
+  const result = await callTool("proprietio_get_owner_update", {
+    scope_id: "port_tx",
+    as_of_date: "2026-05-31",
+    period_start: "2026-05-01",
+    period_end: "2026-05-31",
+    tone: "executive",
+  });
+  const financials = result.financials as Record<string, unknown>;
+  const ownerUpdate = result.owner_update as Record<string, unknown>;
+  const actionPlan = ownerUpdate.action_plan as Array<Record<string, unknown>>;
+
+  assert.deepEqual(financials, {
+    months: 1,
+    total_revenue: 17420,
+    operating_expenses: 7316,
+    noi: 10104,
+    noi_margin_pct: 58,
+  });
+  assert.equal(ownerUpdate.subject, "Portfolio owner update: 2026-05-01 to 2026-05-31");
+  assert.match(String(ownerUpdate.executive_summary), /\$10,104 NOI/);
+  assert.equal(actionPlan[0].source_id, "wo_006");
+  assert.equal(actionPlan[0].priority, "critical");
+  assert.match(String(ownerUpdate.copy_ready_email_body), /Next actions:/);
+  assert.match(String(ownerUpdate.copy_ready_email_body), /Proprietio/);
+  assertNoResidentPii(result);
+});
+
 test("review fixture mode keeps submitted prompts deterministic even with the live backend enabled", async () => {
   const previousBackendMode = process.env.BACKEND_MODE;
   const previousReviewFixtures = process.env.OPENAI_REVIEW_FIXTURES;
@@ -205,6 +310,22 @@ test("review fixture mode keeps submitted prompts deterministic even with the li
       assert.equal("phone" in resident, false);
       assert.equal("resident_id" in resident, false);
     }
+
+    const commandCenterResult = await callTool("proprietio_get_command_center", {
+      scope_id: "port_tx",
+      as_of_date: "2026-05-31",
+      max_actions: 5,
+    });
+    assert.equal((commandCenterResult.risk_summary as Record<string, any>).highest_risk_property.property_id, "prop_001");
+    assert.equal((commandCenterResult.action_queue as Array<Record<string, unknown>>)[0].source_id, "wo_006");
+
+    const ownerUpdateResult = await callTool("proprietio_get_owner_update", {
+      scope_id: "port_tx",
+      as_of_date: "2026-05-31",
+      period_start: "2026-05-01",
+      period_end: "2026-05-31",
+    });
+    assert.equal((ownerUpdateResult.financials as Record<string, unknown>).noi, 10104);
   } finally {
     restoreEnv("BACKEND_MODE", previousBackendMode);
     restoreEnv("OPENAI_REVIEW_FIXTURES", previousReviewFixtures);

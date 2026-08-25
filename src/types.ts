@@ -42,6 +42,72 @@ export const GetDailyBriefInput = z.object({
     .describe("Whether to include Proprietio deep links for follow-up actions. Defaults to true."),
 });
 
+export const GetCommandCenterInput = z.object({
+  scope_id: ScopeId.optional()
+    .default("portfolio")
+    .describe("Property ID such as 'prop_001', portfolio ID such as 'port_tx', or 'portfolio' for the user's whole organization. Defaults to 'portfolio'."),
+  as_of_date: AsOfDate.optional(),
+  period_start: PeriodStartDate.optional(),
+  period_end: PeriodEndDate.optional(),
+  max_actions: z
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .optional()
+    .default(10)
+    .describe("Maximum number of ranked action items to return, from 1 to 20. Defaults to 10."),
+  include_links: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe("Whether to include Proprietio deep links for follow-up actions. Defaults to true."),
+});
+
+export const GetOwnerUpdateInput = z.object({
+  scope_id: ScopeId.optional()
+    .default("portfolio")
+    .describe("Property ID such as 'prop_001', portfolio ID such as 'port_tx', or 'portfolio' for the user's whole organization. Defaults to 'portfolio'."),
+  as_of_date: AsOfDate.optional(),
+  period_start: PeriodStartDate.optional(),
+  period_end: PeriodEndDate.optional(),
+  tone: z
+    .enum(["executive", "friendly", "board"])
+    .optional()
+    .default("executive")
+    .describe("Writing style for the copy-ready owner update. Defaults to 'executive'."),
+  include_action_plan: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe("Whether to include a recommended next-action plan. Defaults to true."),
+});
+
+export const GetRiskRadarInput = z.object({
+  scope_id: ScopeId.optional()
+    .default("portfolio")
+    .describe("Property ID such as 'prop_001', portfolio ID such as 'port_tx', or 'portfolio' for the user's whole organization. Defaults to 'portfolio'."),
+  as_of_date: AsOfDate.optional(),
+  include_links: z
+    .boolean()
+    .optional()
+    .default(true)
+    .describe("Whether to include Proprietio deep links for the highest-risk properties and actions. Defaults to true."),
+  risk_threshold: z
+    .enum(["all", "elevated", "critical"])
+    .optional()
+    .default("all")
+    .describe("Filter risk cards. 'all' returns every property, 'elevated' returns medium/high/critical risk, and 'critical' returns only critical risk."),
+  max_properties: z
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .optional()
+    .default(25)
+    .describe("Maximum number of property scorecards to return, from 1 to 50. Defaults to 25."),
+});
+
 // ---------- Domain entities (output shapes) ----------
 export interface Property {
   property_id: string;

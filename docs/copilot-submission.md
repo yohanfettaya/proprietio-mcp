@@ -30,7 +30,7 @@ A2 is paperwork + attestations, mostly non-engineering.
 
 ## 1. What reuses as-is
 
-Same MCP server, same 19 public tools, same `structuredContent` + annotations Claude and ChatGPT
+Same MCP server, same 22 public tools, same `structuredContent` + annotations Claude and ChatGPT
 use. Copilot Studio's MCP connector speaks Streamable HTTP. **Zero server changes for A1.**
 The only Copilot-specific concept is *how the user authenticates*: instead of registering
 directly against our OAuth (DCR like ChatGPT), enterprise tenants authenticate through
@@ -66,8 +66,9 @@ enforcement stays at rentaly's `/api/v1/*` — unchanged.
 - Add a **custom MCP connector** (or custom connector with the MCP action) targeting
   `https://mcp.proprietio.com/mcp`.
 - Auth: OAuth 2.0 via the Entra app from §2.1.
-- Surface the tools as a Copilot **agent**; optionally curate which of the 19 public tools show (never
-  rename — frozen contract). Recommend leading with the read tools; gate writes behind the
+- Surface the tools as a Copilot **agent**; optionally curate which of the 22 public tools show (never
+  rename — frozen contract). Recommend leading with the V3 read tools (`command_center`,
+  `risk_radar`, `owner_update`) plus the core accounting/maintenance reads; gate writes behind the
   two write scopes at consent.
 - Test in your own M365 tenant before any marketplace step.
 
@@ -99,9 +100,9 @@ remains the enforcement boundary regardless of which front door the user came th
 
 | Proprietio OAuth scope | Entra delegated scope | Tools |
 |---|---|---|
-| `properties:read` | `Properties.Read` | search/get property, list units, get lease |
+| `properties:read` | `Properties.Read` | search/get property, list units |
 | `tenants:read` | `Tenants.Read` | list residents |
-| `accounting:read` | `Accounting.Read` | rent roll, delinquency, P&L, balance sheet, GL, NOI |
+| `accounting:read` | `Accounting.Read` | rent roll, delinquency, P&L, balance sheet, GL, NOI, get lease |
 | `maintenance:read` | `Maintenance.Read` | search/get work order, list vendors |
 | `maintenance:write` | `Maintenance.Write` | create/update/close work order |
 | `communications:write` | `Communications.Write` | send message |
@@ -115,6 +116,9 @@ Once the Copilot Studio agent is wired in a test M365 tenant:
 1. In Copilot, invoke the Proprietio agent.
 2. Entra consent → grant the read scopes (writes opt-in).
 3. Same validated prompts as the ChatGPT packet §4 (they're channel-agnostic):
+   - *"Give me the Proprietio command center for portfolio port_tx."*
+   - *"Show the Proprietio risk radar for critical properties only."*
+   - *"Generate a Proprietio owner update for May 2026."*
    - *"Search my Proprietio properties."*
    - *"Delinquency aging by property this month."*
    - *"NOI for [demo property] last month."*

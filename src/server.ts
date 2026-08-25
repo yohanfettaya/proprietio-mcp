@@ -14,7 +14,7 @@ import { allTools, type ToolDefinition } from "./tools/index.js";
 import { scopeForTool } from "./scopes.js";
 
 const SERVER_NAME = process.env.MCP_SERVER_NAME ?? "proprietio-mcp";
-const SERVER_VERSION = process.env.MCP_SERVER_VERSION ?? "2.0.0";
+const SERVER_VERSION = process.env.MCP_SERVER_VERSION ?? "3.0.0";
 
 type JsonObject = Record<string, unknown>;
 

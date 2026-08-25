@@ -1,7 +1,7 @@
 /**
  * Demo client — calls the Proprietio MCP server over HTTP and prints
  * a few realistic tool calls. Use this to smoke-test or to demo to
- * Anthropic's review team.
+ * marketplace review teams.
  *
  *   Terminal A:  npm run dev
  *   Terminal B:  npm run demo
@@ -56,28 +56,54 @@ async function main() {
   console.log(`Registered ${names.length} tools:`);
   names.forEach((n: string) => console.log(`  - ${n}`));
 
-  divider("3. Search Texas portfolio");
+  divider("3. V3 command center (TX portfolio, as of 2026-05-31)");
+  const commandCenter = await rpc("tools/call", {
+    name: "proprietio_get_command_center",
+    arguments: { scope_id: "port_tx", as_of_date: "2026-05-31", max_actions: 5 },
+  });
+  console.log(commandCenter.result?.content?.[0]?.text);
+
+  divider("4. V3 critical risk radar");
+  const riskRadar = await rpc("tools/call", {
+    name: "proprietio_get_risk_radar",
+    arguments: { scope_id: "port_tx", as_of_date: "2026-05-31", risk_threshold: "critical" },
+  });
+  console.log(riskRadar.result?.content?.[0]?.text);
+
+  divider("5. V3 owner update for May 2026");
+  const ownerUpdate = await rpc("tools/call", {
+    name: "proprietio_get_owner_update",
+    arguments: {
+      scope_id: "port_tx",
+      as_of_date: "2026-05-31",
+      period_start: "2026-05-01",
+      period_end: "2026-05-31",
+    },
+  });
+  console.log(ownerUpdate.result?.content?.[0]?.text);
+
+  divider("6. Search Texas portfolio");
   const search = await rpc("tools/call", {
     name: "proprietio_search_properties",
     arguments: { state: "TX" },
   });
   console.log(search.result?.content?.[0]?.text);
 
-  divider("4. Delinquency by property (TX portfolio, as of 2026-05-31)");
+  divider("7. Delinquency by property (TX portfolio, as of 2026-05-31)");
   const delinq = await rpc("tools/call", {
     name: "proprietio_get_delinquency",
     arguments: { scope_id: "port_tx", as_of_date: "2026-05-31", group_by: "property" },
   });
   console.log(delinq.result?.content?.[0]?.text);
 
-  divider("5. Stale work orders (open > 7 days)");
+  divider("8. Stale work orders (open > 7 days)");
   const stale = await rpc("tools/call", {
     name: "proprietio_search_work_orders",
     arguments: { status: "open", min_days_open: 7 },
   });
   console.log(stale.result?.content?.[0]?.text);
 
-  divider("6. NOI for The Madison, May 2026");
+  divider("9. NOI for The Madison, May 2026");
   const noi = await rpc("tools/call", {
     name: "proprietio_get_noi",
     arguments: {
@@ -88,7 +114,7 @@ async function main() {
   });
   console.log(noi.result?.content?.[0]?.text);
 
-  divider("7. Create a work order (WRITE)");
+  divider("10. Create a work order (WRITE)");
   const create = await rpc("tools/call", {
     name: "proprietio_create_work_order",
     arguments: {

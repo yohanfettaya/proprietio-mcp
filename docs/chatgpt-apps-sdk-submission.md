@@ -5,7 +5,7 @@ ChatGPT Apps SDK consumes an MCP server over Streamable HTTP — **the same serv
 already runs in prod** — so there is no new build. This packet is collateral + a reviewer
 runbook only.
 
-Status: 2026-07-29 · v1.0.0 published · v2 adds the daily operations brief.
+Status: 2026-08-25 · v1.0.0 published · v3 adds the operations command center, owner update, and risk radar.
 Owner: Yohan Fettaya (yohan@proprietio.com).
 
 ---
@@ -22,10 +22,10 @@ machine-readable tool metadata. All four are live:
 | OAuth 2.1 Authorization Code + PKCE S256 | live | `https://api.proprietio.com/.well-known/oauth-authorization-server` → 200 |
 | Dynamic Client Registration (RFC 7591) | live | `POST https://api.proprietio.com/oauth/register` |
 | Protected-resource discovery (RFC 9728) | live | connector 401 → `WWW-Authenticate` → resource doc |
-| Tool annotations (`readOnlyHint` etc.) | live | `tools/list` returns annotations on all 19 public tools |
+| Tool annotations (`readOnlyHint` etc.) | live | `tools/list` returns annotations on all 22 public tools |
 | `structuredContent` on results | live | `tools/call` returns it alongside the text block |
 
-ChatGPT's safety review keys off the annotations: 15 public tools are `readOnlyHint: true`; the 3
+ChatGPT's safety review keys off the annotations: 18 public tools are `readOnlyHint: true`; the 3
 maintenance writes plus `send_message` are not. `update_work_order`, `close_work_order`, and
 `send_message` are conservatively marked destructive; only `proprietio_send_message` is
 `openWorldHint: true` (it leaves the system — sends to a resident/vendor).
@@ -39,7 +39,7 @@ maintenance writes plus `send_message` are not. `update_work_order`, `close_work
 | App name | **Proprietio** |
 | Tagline (≤10 words) | Property management, accounting & maintenance for your portfolio. |
 | Category | Productivity / Real Estate |
-| Short description (≤140 chars) | Query rent rolls, NOI, delinquency, and work orders — and act on them — across your real-estate portfolio in natural language. |
+| Short description (≤140 chars) | Property management software for portfolio ops: rent roll, NOI, delinquency, maintenance, risk radar, and owner updates in chat. |
 | Long description | See §1.1 |
 | Developer / company | Proprietio |
 | Company URL | https://www.proprietio.com |
@@ -55,11 +55,13 @@ maintenance writes plus `send_message` are not. `update_work_order`, `close_work
 
 ### 1.1 Long description
 
-> Proprietio connects ChatGPT to your live property-management platform. Ask about any
+> Proprietio connects ChatGPT to your live property-management software. Property
+> managers, multifamily operators, asset managers, and owner-operators can ask about any
 > property, unit, lease, or resident; pull accounting in plain English — rent roll,
 > delinquency aging, income statement, balance sheet, general ledger, net operating
 > income; and run maintenance end to end — search, open, update, and close work orders,
-> and look up vendors. You can also message residents and vendors directly.
+> and look up vendors. V3 adds an operations command center, property risk radar, ranked
+> action queue, and copy-ready owner updates for portfolio reporting.
 >
 > Every request is scoped to your organization through OAuth 2.1: you log in to Proprietio,
 > consent to a specific set of permissions (read vs. write, per domain), and ChatGPT only
@@ -107,18 +109,21 @@ behavior — not a bug.
 
 ---
 
-## 3. Tool catalog (19 public tools)
+## 3. Tool catalog (22 public tools)
 
 Names and input schemas are the frozen Anthropic-side contract (root `CLAUDE.md` §8);
-ChatGPT is naming-agnostic and reuses them verbatim. **15 read, 4 write.**
+ChatGPT is naming-agnostic and reuses them verbatim. **18 read, 4 write.**
 
 | Domain | Tool (`name`) | Title | R/W | Scope |
 |---|---|---|---|---|
 | Operations | `proprietio_get_daily_brief` | Get daily operations brief | R | `properties:read` + `accounting:read` + `maintenance:read` |
+| Operations | `proprietio_get_command_center` | Get operations command center | R | `properties:read` + `accounting:read` + `maintenance:read` |
+| Operations | `proprietio_get_owner_update` | Generate owner update | R | `properties:read` + `accounting:read` + `maintenance:read` |
+| Operations | `proprietio_get_risk_radar` | Get portfolio risk radar | R | `properties:read` + `accounting:read` + `maintenance:read` |
 | Properties | `proprietio_search_properties` | Search properties | R | `properties:read` |
 | Properties | `proprietio_get_property` | Get property | R | `properties:read` |
 | Properties | `proprietio_list_units` | List units | R | `properties:read` |
-| Properties | `proprietio_get_lease` | Get lease | R | `properties:read` |
+| Properties | `proprietio_get_lease` | Get lease | R | `accounting:read` |
 | Properties | `proprietio_list_residents` | List residents | R | `tenants:read` |
 | Accounting | `proprietio_get_rent_roll` | Get rent roll | R | `accounting:read` |
 | Accounting | `proprietio_get_delinquency` | Get delinquency | R | `accounting:read` |
@@ -150,6 +155,9 @@ ChatGPT is naming-agnostic and reuses them verbatim. **15 read, 4 write.**
 
    | Prompt | Expected tool call | Expected outcome |
    |---|---|---|
+   | *"Give me the Proprietio command center for portfolio port_tx as of 2026-05-31, with the top 5 actions."* | `proprietio_get_command_center` with `scope_id:"port_tx"`, `as_of_date:"2026-05-31"`, `max_actions:5` | Returns V3 command center: 5 KPI tiles, 10 units, 80% occupancy, `$12,800` delinquency, `$3,450` monthly loss-to-lease, 3 elevated property scorecards, top scorecard The Madison (`risk_score:89`, `critical`), and top action `wo_006` emergency plumbing. |
+   | *"Show the Proprietio risk radar for portfolio port_tx as of 2026-05-31, critical properties only."* | `proprietio_get_risk_radar` with `scope_id:"port_tx"`, `as_of_date:"2026-05-31"`, `risk_threshold:"critical"` | Returns one critical scorecard: The Madison (`prop_001`, score 89). Category radar identifies maintenance as the top risk bucket, with top factor `1 emergency work order(s) active`. |
+   | *"Generate a Proprietio owner update for portfolio port_tx for May 2026."* | `proprietio_get_owner_update` with `scope_id:"port_tx"`, `period_start:"2026-05-01"`, `period_end:"2026-05-31"` | Returns a copy-ready owner update without resident PII: revenue `$17,420`, operating expenses `$7,316`, NOI `$10,104`, NOI margin `58%`, and an action plan led by `wo_006`. |
    | *"Give me today's Proprietio operations brief for portfolio port_tx as of 2026-05-31."* | `proprietio_get_daily_brief` with `scope_id:"port_tx"`, `as_of_date:"2026-05-31"` | Returns a prioritized brief without resident PII: 10 units, `$12,800` delinquency, 3 urgent work orders, 3 stale work orders, 2 vacant units, and top priority `wo_006` emergency plumbing. |
    | *"Search my Proprietio properties in Texas."* | `proprietio_search_properties` with `state:"TX"` | 3 properties: The Madison (`prop_001`), Riverbend Lofts (`prop_002`), Hill Country Commons (`prop_003`). |
    | *"Show delinquency aging for portfolio port_tx as of 2026-05-31, grouped by property."* | `proprietio_get_delinquency` with `scope_id:"port_tx"`, `as_of_date:"2026-05-31"`, `group_by:"property"` | Total delinquency is `$12,800`: The Madison `$7,250`, Riverbend Lofts `$3,850`, Hill Country Commons `$1,700`. |
@@ -179,8 +187,9 @@ beyond the seeded demo org; first call after idle may take ~30s (free-tier spin-
 - **Write tools are real.** `create/update/close_work_order` and `send_message` mutate the
   demo org and (for `send_message`) can leave the system. Keep them on the seeded demo org;
   do not grant write scopes against a real customer org during review.
-- **No widgets in V1.** Tool-only app. ChatGPT renders `structuredContent`; no `ui://`
-  resource templates yet (V2, per distribution-strategy §6.5).
+- **No widgets yet.** V3 is still tool-first. ChatGPT renders `structuredContent`; no `ui://`
+  resource templates yet (per distribution-strategy §6.5). The new `ui_model` in
+  `proprietio_get_command_center` is ready for a future widget without requiring one for listing.
 
 ---
 

@@ -1,17 +1,18 @@
 # Proprietio x Claude MCP Integration — Status Brief
 
-Last updated: 2026-07-29
+Last updated: 2026-08-25
 
 This file is the handoff context for the Proprietio MCP server. Read it first before touching anything MCP-related.
 
 ---
 
-## 1. Status today (2026-07-29)
+## 1. Status today (2026-08-25)
 
 - Application submitted to the **Anthropic Partner Network / Connector Directory**. Anthropic review replied on 2026-07-29 that the tool set is approved in substance, with two listing-field fixes required before publication: support contact must be `support@proprietio.com`, and privacy policy must be `https://www.proprietio.com/privacy`.
 - MCP server is **live** at `https://mcp.proprietio.com/mcp`.
 - Source repo: `https://github.com/yohanfettaya/proprietio-mcp`.
-- **19 public tools** exposed, grouped: operations (1), properties (5), accounting (6), maintenance (6), comms (1), plus 1 debug tool.
+- **22 public tools** exposed, grouped: operations (4), properties (5), accounting (6), maintenance (6), comms (1), plus 1 debug tool.
+- **V3 operations layer shipped in source**: `proprietio_get_command_center`, `proprietio_get_owner_update`, and `proprietio_get_risk_radar` add command-center KPIs, property risk scorecards, ranked action queues, and copy-ready owner updates without resident PII.
 - Hosted on **Render free tier** — instance spins down after ~15 min of inactivity, first call after sleep takes ~30s. Fine for demo, not for prod.
 - **Live backend wiring done (Phase 2, 2026-05-29).** Handlers call the real rentaly `/api/v1/*` API when `BACKEND_MODE=live`; the mock fixtures stay intact and serve when `BACKEND_MODE=mock` (the default). All HTTP, pagination, money (cents→dollars), and error mapping live in the single conversion point `src/api/rentaly-client.ts`. To go live in prod: set `RENTALY_API_BASE_URL` + `RENTALY_API_KEY` and flip `BACKEND_MODE=live` on Render, then `npm run smoke`.
 
@@ -81,25 +82,28 @@ In rough priority order:
 
 ---
 
-## 5. The 19 public tools
+## 5. The 22 public tools
 
-**Operations (1)**
+**Operations (4)**
 - `proprietio_get_daily_brief` — prioritized daily operating brief across delinquency, maintenance, vacancy, loss-to-lease, and next actions.
+- `proprietio_get_command_center` — V3 command-center snapshot with KPI tiles, ranked property scorecards, action queue, and UI-ready model.
+- `proprietio_get_owner_update` — copy-ready owner/investor update with NOI, occupancy, delinquency, maintenance risk, and action plan.
+- `proprietio_get_risk_radar` — property risk radar across maintenance, delinquency, leasing, and revenue signals.
 
 **Properties (5)**
 - `proprietio_search_properties` — search portfolio by address, owner, status.
 - `proprietio_get_property` — fetch one property by ID with units and metadata.
 - `proprietio_list_units` — list units for a property.
-- `proprietio_get_rent_roll` — current rent roll snapshot for a property.
+- `proprietio_get_lease` — lease terms, charges, dates by lease ID.
 - `proprietio_list_residents` — residents/tenants for a property or unit.
 
 **Accounting (6)**
+- `proprietio_get_rent_roll` — current rent roll snapshot for a property or portfolio.
 - `proprietio_get_balance_sheet` — balance sheet for an entity at a date.
 - `proprietio_get_income_statement` — P&L for a period.
 - `proprietio_get_general_ledger` — GL entries with filters.
 - `proprietio_get_noi` — net operating income for a property/period.
 - `proprietio_get_delinquency` — current AR aging / delinquent residents.
-- `proprietio_get_lease` — lease terms, charges, dates by lease ID.
 
 **Maintenance (6)**
 - `proprietio_create_work_order` — open a new work order.
@@ -138,7 +142,7 @@ Live URLs:
 
 ## 8. DO NOT modify
 
-The **19 public tool names and their input schemas are the public MCP contract**. Every integration that lands binds against these names and shapes.
+The **22 public tool names and their input schemas are the public MCP contract**. Every integration that lands binds against these names and shapes.
 
 - Do **not** rename a tool.
 - Do **not** remove or rename a field on an input schema.

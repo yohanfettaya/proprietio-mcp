@@ -80,10 +80,13 @@ production secret: never commit it, never paste it into a conversation.)
 
 Same channel-agnostic prompts as the ChatGPT packet:
 
-1. *"Search my Proprietio properties."* → `proprietio_search_properties`
-2. *"Delinquency aging by property this month."* → `proprietio_get_delinquency`
-3. *"NOI for [demo property] last month."* → `proprietio_get_noi`
-4. *"Open work orders older than 7 days."* → `proprietio_search_work_orders`
+1. *"Give me the Proprietio command center for portfolio port_tx."* → `proprietio_get_command_center`
+2. *"Show the Proprietio risk radar for critical properties only."* → `proprietio_get_risk_radar`
+3. *"Generate a Proprietio owner update for May 2026."* → `proprietio_get_owner_update`
+4. *"Search my Proprietio properties."* → `proprietio_search_properties`
+5. *"Delinquency aging by property this month."* → `proprietio_get_delinquency`
+6. *"NOI for [demo property] last month."* → `proprietio_get_noi`
+7. *"Open work orders older than 7 days."* → `proprietio_search_work_orders`
 
 **Scope-denial demo:** connect with read-only consent, then ask Copilot to *create a
 work order* → expect a `403` naming `maintenance:write`. Re-consent with the write
@@ -93,7 +96,7 @@ scope to enable it.
 
 ## Notes & gotchas
 
-- **19 public tools, stable names.** The `proprietio_*` names are the public contract
+- **22 public tools, stable names.** The `proprietio_*` names are the public contract
   (root `CLAUDE.md` §8). Curate *which* tools the agent surfaces if you like; never
   rename.
 - **Cold start.** The MCP server is on Render's free tier — the first call after

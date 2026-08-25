@@ -80,8 +80,8 @@ export const allTools: ToolDefinition[] = [
   ...debugTools,
 ];
 
-if (allTools.length !== 20) {
-  // Self-check at module load: the spec promises 19 public tools + 1 debug tool.
+if (allTools.length !== 23) {
+  // Self-check at module load: the spec promises 22 public tools + 1 debug tool.
   // Throwing here makes mismatches obvious in CI.
-  throw new Error(`Expected 20 tools, registered ${allTools.length}`);
+  throw new Error(`Expected 23 tools, registered ${allTools.length}`);
 }

@@ -15,6 +15,9 @@
 export const TOOL_SCOPES: Record<string, string> = {
   // Operations cockpit (read bundle)
   proprietio_get_daily_brief: "properties:read accounting:read maintenance:read",
+  proprietio_get_command_center: "properties:read accounting:read maintenance:read",
+  proprietio_get_owner_update: "properties:read accounting:read maintenance:read",
+  proprietio_get_risk_radar: "properties:read accounting:read maintenance:read",
   // Properties (properties:read)
   proprietio_search_properties: "properties:read",
   proprietio_get_property: "properties:read",

@@ -1,8 +1,8 @@
 # Proprietio MCP
 
-> Modern property management, accounting, and maintenance connector for Claude.
+> Modern property management, accounting, and maintenance connector for AI assistants.
 
-Proprietio MCP exposes Proprietio's property management platform as a Model Context Protocol (MCP) server. Claude users — property managers, multifamily operators, and asset managers — can query and act on portfolio data in natural language.
+Proprietio MCP exposes Proprietio's property management platform as a Model Context Protocol (MCP) server. Property managers, multifamily operators, and asset managers can query, understand, and act on portfolio data in natural language through Claude, ChatGPT, and Microsoft Copilot.
 
 This repository contains the **reference implementation** with embedded mock data, ready for local demo and review.
 
@@ -37,7 +37,7 @@ In a second terminal, while the server is running:
 npm run demo
 ```
 
-This walks through 7 representative tool calls (search properties, delinquency aging, NOI, work order creation, etc.) against the embedded mock portfolio.
+This walks through 10 representative tool calls (V3 command center, risk radar, owner update, search properties, delinquency aging, NOI, work order creation, etc.) against the embedded mock portfolio.
 
 ---
 
@@ -50,8 +50,8 @@ src/
 ├── auth.ts             OAuth 2.0 metadata + bearer middleware
 ├── types.ts            Zod input schemas + entity types
 ├── tools/
-│   ├── index.ts        Tool registry (19 public tools + 1 debug)
-│   ├── operations.ts   Daily operations brief (1)
+│   ├── index.ts        Tool registry (22 public tools + 1 debug)
+│   ├── operations.ts   Daily brief + V3 command center (4)
 │   ├── properties.ts   Leasing & properties (5)
 │   ├── accounting.ts   GL, rent roll, P&L, NOI (6)
 │   ├── maintenance.ts  Work orders & vendors (6)
@@ -62,15 +62,18 @@ src/
 
 ---
 
-## Tools (19 public)
+## Tools (22 public)
 
 | Domain | Tool | Scope |
 |--------|------|-------|
 | Operations | `proprietio_get_daily_brief` | `properties:read` + `accounting:read` + `maintenance:read` |
+| Operations | `proprietio_get_command_center` | `properties:read` + `accounting:read` + `maintenance:read` |
+| Operations | `proprietio_get_owner_update` | `properties:read` + `accounting:read` + `maintenance:read` |
+| Operations | `proprietio_get_risk_radar` | `properties:read` + `accounting:read` + `maintenance:read` |
 | Properties | `proprietio_search_properties` | `properties:read` |
 | Properties | `proprietio_get_property` | `properties:read` |
 | Properties | `proprietio_list_units` | `properties:read` |
-| Properties | `proprietio_get_lease` | `properties:read` |
+| Properties | `proprietio_get_lease` | `accounting:read` |
 | Properties | `proprietio_list_residents` | `tenants:read` |
 | Accounting | `proprietio_get_rent_roll` | `accounting:read` |
 | Accounting | `proprietio_get_delinquency` | `accounting:read` |
@@ -129,12 +132,13 @@ Add the remote MCP at `https://your-host/mcp` in Claude Settings → Connectors.
 
 Once Claude is connected, try:
 
-1. *"Give me today's Proprietio operations brief for my portfolio."*
-2. *"What's the delinquency rate across my Texas portfolio this month, grouped by property?"*
-3. *"Show me all open maintenance work orders older than 7 days and draft a vendor follow-up message."*
-4. *"What's the NOI for The Madison in May 2026?"*
-5. *"Create a high-priority work order for unit 102 at The Madison — kitchen sink is leaking."*
-6. *"Compare rent roll between Riverbend Lofts and Hill Country Commons."*
+1. *"Give me today's Proprietio command center for portfolio port_tx."*
+2. *"Show the risk radar for my Texas portfolio and explain the top property risk."*
+3. *"Generate an owner update for May 2026 with the action plan."*
+4. *"What's the delinquency rate across my Texas portfolio this month, grouped by property?"*
+5. *"Show me all open maintenance work orders older than 7 days and draft a vendor follow-up message."*
+6. *"What's the NOI for The Madison in May 2026?"*
+7. *"Create a high-priority work order for unit 102 at The Madison — kitchen sink is leaking."*
 
 ---
 
@@ -151,7 +155,7 @@ verbatim to rentaly via a per-request `AsyncLocalStorage` context (never stored)
 resolves `token → organizationId` and enforces scopes per route — the real boundary.
 
 Scopes: `properties:read`, `tenants:read`, `accounting:read`, `maintenance:read`,
-`maintenance:write`, `communications:write` (15 public read tools, 4 write). `src/scopes.ts`
+`maintenance:write`, `communications:write` (18 public read tools, 4 write). `src/scopes.ts`
 mirrors the tool→scope map advisory-only, to name a missing scope in the error.
 
 ### Demo / open mode (local dev)
